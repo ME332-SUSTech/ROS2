@@ -12,6 +12,50 @@
 - 💻 **代码高亮** - Python/C++/Bash语法高亮显示
 - 🎯 **快速导航** - URL跳转工具，直接访问官方文档对应页面
 
+## 📖 快速导航
+
+- 🚀 [快速开始](#-快速开始) - 5分钟上手使用
+- 🔐 [API密钥配置](SETUP_GUIDE.md) - 管理员配置指南
+- 🔧 [开发者更新指南](UPDATE.md) - 后期维护和定制
+- 📝 [使用说明](#-使用说明) - 功能详解
+
+## ⚠️ 重要声明
+
+### 非商用教学项目
+
+本项目是**非商用、非盈利的教育项目**，仅用于ROS2教学和学习目的。
+
+### 版权与授权
+
+1. **ROS2官方文档**：本项目包含的ROS2 Humble官方文档HTML文件是从 [docs.ros.org](https://docs.ros.org/) 复制而来，遵循ROS2项目的开源许可证（Apache License 2.0）。
+
+2. **文档版权**：所有ROS2文档内容的版权归Open Robotics和ROS2贡献者所有。本项目对文档内容未做任何修改，仅添加了交互式AI助手功能。
+
+3. **AI助手代码**：本项目开发的AI助手集成代码采用MIT License开源。
+
+4. **使用限制**：
+   - ✅ 允许用于教育和学习
+   - ✅ 允许个人非商业使用
+   - ✅ 允许在遵守许可证的前提下修改和分发
+   - ❌ 禁止用于商业用途
+   - ❌ 禁止违反ROS2和相关组件的许可证
+
+### 免责声明
+
+- 本项目不对AI助手生成的内容准确性负责，建议以官方文档为准
+- API密钥安全由用户自行负责，建议定期更换
+- 本项目提供的加密方案仅为简单混淆，不保证绝对安全
+- 使用本项目产生的任何问题和损失，开发者不承担责任
+
+### 致谢与引用
+
+如果本项目对您的学习有帮助，请引用：
+```
+ROS2 Humble Interactive Tutorial Website
+https://github.com/ME332-SUSTech/ROS2
+Built upon ROS2 official documentation (https://docs.ros.org/)
+```
+
 ## 🌐 在线访问
 
 **GitHub Pages**: https://me332-sustech.github.io/ROS2/
@@ -379,23 +423,37 @@ A: 编辑`config.yaml`中的`security.allowed_domains`，然后重新运行`encr
 
 ## 📄 许可证
 
-MIT License - 详见[LICENSE](LICENSE)文件
+- **AI助手代码**: MIT License - 详见[LICENSE](LICENSE)文件
+- **ROS2文档内容**: Apache License 2.0 (原始版权归Open Robotics所有)
+- **本项目**: 非商用教育项目，仅供学习使用
 
 ## 🙏 致谢
 
-- ROS2官方文档：https://docs.ros.org/
+- **ROS2项目**: https://www.ros.org/ 和 https://docs.ros.org/
+- **Open Robotics**: ROS2的开发和维护组织
 - 通义千问API：https://dashscope.aliyuncs.com/
 - DeepSeek API：https://platform.deepseek.com/
 - GitHub Pages：https://pages.github.com/
+- 所有ROS2社区贡献者
 
-## 📮 联系方式
+## 📮 联系与贡献
 
 - **仓库地址**：https://github.com/ME332-SUSTech/ROS2
-- **问题反馈**：GitHub Issues
+- **问题反馈**：[GitHub Issues](https://github.com/ME332-SUSTech/ROS2/issues)
 - **功能建议**：Pull Requests欢迎
+- **开发指南**：[UPDATE.md](UPDATE.md) - 开发者维护文档
+
+### 贡献指南
+
+欢迎提交Issue和PR，请确保：
+1. 遵守项目的非商用教育性质
+2. 尊重ROS2和相关组件的许可证
+3. 提交前测试代码功能
+4. 遵循现有代码风格
 
 ---
 
+**项目性质**: 🎓 非商用教育项目  
 **更新日期**: 2026年1月14日  
 **版本**: 3.0（加密API密钥）  
 **维护状态**: ✅ 积极维护中
