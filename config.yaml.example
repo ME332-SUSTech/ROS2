@@ -1,0 +1,33 @@
+# AI API 密钥配置文件
+# 复制此文件为 config.yaml 并填入你的真实API密钥
+# config.yaml 不会被上传到Git仓库
+
+# 通义千问 API 配置
+qwen:
+  api_key: "your-qwen-api-key-here"
+  endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  models:
+    - "qwen-max"
+    - "qwen-plus"
+    - "qwen-turbo"
+    - "qwen-vl-max"
+
+# DeepSeek API 配置
+deepseek:
+  api_key: "your-deepseek-api-key-here"
+  endpoint: "https://api.deepseek.com/v1"
+  models:
+    - "deepseek-chat"
+    - "deepseek-coder"
+
+# 安全设置
+security:
+  # 混淆密钥（用于简单加密，请修改为随机字符串）
+  obfuscation_key: "ros2-teaching-site-secret-key-change-this"
+  
+  # 允许的域名（用于域名白名单）
+  allowed_domains:
+    - "me332-sustech.github.io"
+    - "me332-sustech.github.io/ROS2"
+    - "localhost"
+    - "127.0.0.1"

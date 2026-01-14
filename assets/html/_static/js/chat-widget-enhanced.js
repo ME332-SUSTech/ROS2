@@ -28,9 +28,16 @@ class AIChat {
         // API配置（支持OpenAI格式的各种服务）
         this.isAdminMode = localStorage.getItem('ai_admin_mode') === 'true';
         this.adminPassword = 'ros2admin'; // 管理员密码
-        this.apiKey = localStorage.getItem('ai_api_key') || '';
-        this.apiEndpoint = localStorage.getItem('ai_api_endpoint') || 'https://api.openai.com/v1/chat/completions';
-        this.apiProvider = localStorage.getItem('ai_provider') || 'qwen';
+        
+        // 尝试从加密配置加载API密钥
+        this.loadEncryptedConfig();
+        
+        // 如果没有加密配置，则使用localStorage（管理员手动配置）
+        if (!this.apiKey) {
+            this.apiKey = localStorage.getItem('ai_api_key') || '';
+            this.apiEndpoint = localStorage.getItem('ai_api_endpoint') || 'https://api.openai.com/v1/chat/completions';
+            this.apiProvider = localStorage.getItem('ai_provider') || 'qwen';
+        }
         
         // 对话历史（支持跨页面保存）
         this.conversationHistory = this.loadConversationHistory();
@@ -51,6 +58,34 @@ class AIChat {
                 ? '💡 未配置API密钥。当前使用模拟对话模式。'
                 : '💡 当前使用模拟对话模式。需要智能AI回答请联系管理员配置API密钥。';
             this.addSystemMessage(msg);
+        }
+    }
+    
+    // 加载加密的API配置
+    loadEncryptedConfig() {
+        try {
+            // 如果api-config.js已加载，则使用加密的配置
+            if (typeof ENCRYPTED_CONFIG !== 'undefined' && typeof decryptApiKey === 'function') {
+                // 验证域名
+                if (!isAllowedDomain()) {
+                    console.warn('当前域名未在白名单中，无法使用预配置的API密钥');
+                    return;
+                }
+                
+                // 解密API密钥
+                const provider = localStorage.getItem('ai_provider') || 'qwen';
+                const config = ENCRYPTED_CONFIG[provider];
+                
+                if (config && config.api_key) {
+                    this.apiKey = decryptApiKey(config.api_key, ENCRYPTED_CONFIG.security.key);
+                    this.apiEndpoint = config.endpoint + '/chat/completions';
+                    this.apiProvider = provider;
+                    
+                    console.log('✅ 已加载预配置的API密钥');
+                }
+            }
+        } catch (e) {
+            console.warn('加载加密配置失败，将使用localStorage配置:', e);
         }
     }
     
