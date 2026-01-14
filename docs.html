@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS2 官方文档 - ROS2 Humble 教学</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        /* 文档浏览页面专用样式 */
+        .docs-container {
+            display: flex;
+            margin-top: 100px;
+            min-height: calc(100vh - 100px);
+        }
+        
+        .docs-sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #e2e8f0;
+            padding: 1rem;
+            position: fixed;
+            top: 100px;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+        
+        .docs-sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+        
+        .docs-sidebar h3 {
+            color: #4a5568;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .docs-nav {
+            list-style: none;
+        }
+        
+        .docs-nav-item {
+            margin-bottom: 0.25rem;
+        }
+        
+        .docs-nav-item a {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: #4a5568;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .docs-nav-item a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .docs-nav-item a.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .docs-nav-section {
+            margin-top: 1.5rem;
+        }
+        
+        .docs-nav-section h4 {
+            color: #667eea;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            padding-left: 0.75rem;
+        }
+        
+        .docs-content {
+            flex: 1;
+            margin-left: 300px;
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .docs-content.expanded {
+            margin-left: 0;
+        }
+        
+        .docs-frame-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 80vh;
+        }
+        
+        .docs-frame {
+            width: 100%;
+            height: 85vh;
+            border: none;
+        }
+        
+        .docs-search {
+            margin-bottom: 1rem;
+        }
+        
+        .docs-search input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        
+        .docs-search input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .docs-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        
+        .docs-breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .docs-breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .docs-breadcrumb span {
+            color: #718096;
+        }
+        
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 200;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* 桌面端侧边栏折叠按钮 */
+        .sidebar-collapse-btn {
+            position: fixed;
+            top: 110px;
+            left: 310px;
+            z-index: 100;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 48px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-collapse-btn:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.25);
+        }
+        
+        .sidebar-collapse-btn.collapsed {
+            left: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .docs-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .docs-sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .docs-content {
+                margin-left: 0;
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50vh;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e2e8f0;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>ROS2 Humble 教学文档</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">首页</a></li>
+                    <li><a href="docs.html" class="active">官方文档</a></li>
+                    <li><a href="index.html#tutorials">教程</a></li>
+                    <li><a href="index.html#examples">示例</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar" id="docs-sidebar">
+            <div class="docs-search">
+                <input type="text" id="docs-search-input" placeholder="搜索文档...">
+            </div>
+            
+            <h3>📚 ROS2 文档</h3>
+            
+            <div class="docs-nav-section">
+                <h4>🚀 入门</h4>
+                <ul class="docs-nav" id="getting-started-nav">
+                    <li class="docs-nav-item"><a href="assets/html/index.html" target="docs-frame">文档首页</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Installation.html" target="docs-frame">安装指南</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Concepts.html" target="docs-frame">核心概念</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>📖 教程</h4>
+                <ul class="docs-nav" id="tutorials-nav">
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials.html" target="docs-frame">教程总览</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-CLI-Tools.html" target="docs-frame">CLI工具入门</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-Client-Libraries.html" target="docs-frame">客户端库入门</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Intermediate.html" target="docs-frame">中级教程</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Advanced.html" target="docs-frame">高级教程</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Demos.html" target="docs-frame">演示示例</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>🛠️ 指南</h4>
+                <ul class="docs-nav" id="guides-nav">
+                    <li class="docs-nav-item"><a href="assets/html/How-To-Guides.html" target="docs-frame">使用指南</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Colcon-Tutorial.html" target="docs-frame">Colcon构建工具</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Composition.html" target="docs-frame">组件化</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Logging.html" target="docs-frame">日志系统</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>📡 通信</h4>
+                <ul class="docs-nav" id="communication-nav">
+                    <li class="docs-nav-item"><a href="assets/html/About-ROS-Interfaces.html" target="docs-frame">ROS接口</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/About-ROS-2-Parameters.html" target="docs-frame">参数系统</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Quality-of-Service.html" target="docs-frame">QoS服务质量</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/About-Topic-Statistics.html" target="docs-frame">话题统计</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>🔧 配置</h4>
+                <ul class="docs-nav" id="config-nav">
+                    <li class="docs-nav-item"><a href="assets/html/DDS-and-ROS-middleware-implementations.html" target="docs-frame">DDS中间件</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/FastDDS-Configuration.html" target="docs-frame">FastDDS配置</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Working-with-Eclipse-CycloneDDS.html" target="docs-frame">CycloneDDS</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Discovery-Server.html" target="docs-frame">发现服务器</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>⚡ 高级主题</h4>
+                <ul class="docs-nav" id="advanced-nav">
+                    <li class="docs-nav-item"><a href="assets/html/Real-Time-Programming.html" target="docs-frame">实时编程</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Intra-Process-Communication.html" target="docs-frame">进程内通信</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Managed-Nodes.html" target="docs-frame">托管节点</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Allocator-Template-Tutorial.html" target="docs-frame">内存分配器</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>📦 发布与版本</h4>
+                <ul class="docs-nav" id="releases-nav">
+                    <li class="docs-nav-item"><a href="assets/html/Releases.html" target="docs-frame">版本发布</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Releasing-a-ROS-2-package-with-bloom.html" target="docs-frame">包发布指南</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Migration-Guide.html" target="docs-frame">迁移指南</a></li>
+                </ul>
+            </div>
+            
+            <div class="docs-nav-section">
+                <h4>🔗 相关资源</h4>
+                <ul class="docs-nav" id="resources-nav">
+                    <li class="docs-nav-item"><a href="assets/html/Related-Projects.html" target="docs-frame">相关项目</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Contributing.html" target="docs-frame">贡献指南</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Glossary.html" target="docs-frame">术语表</a></li>
+                    <li class="docs-nav-item"><a href="assets/html/Contact.html" target="docs-frame">联系方式</a></li>
+                </ul>
+            </div>
+        </aside>
+        
+        <main class="docs-content">
+            <div class="docs-frame-container">
+                <div class="docs-breadcrumb">
+                    <a href="index.html">首页</a>
+                    <span>›</span>
+                    <a href="docs.html">官方文档</a>
+                    <span>›</span>
+                    <span id="current-doc-title">文档首页</span>
+                </div>
+                <iframe name="docs-frame" id="docs-frame" class="docs-frame" src="assets/html/index.html"></iframe>
+            </div>
+        </main>
+    </div>
+    
+    <button class="sidebar-toggle" id="sidebar-toggle">
+        ☰
+    </button>
+    
+    <!-- 桌面端侧边栏折叠按钮 -->
+    <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" title="折叠/展开侧边栏">
+        ‹
+    </button>
+
+    <script>
+        // 桌面端侧边栏折叠功能
+        const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+        const sidebar = document.getElementById('docs-sidebar');
+        const docsContent = document.querySelector('.docs-content');
+        
+        sidebarCollapseBtn.addEventListener('click', () => {
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            docsContent.classList.toggle('expanded');
+            sidebarCollapseBtn.classList.toggle('collapsed');
+            
+            // 更新按钮图标
+            sidebarCollapseBtn.textContent = isCollapsed ? '›' : '‹';
+            sidebarCollapseBtn.title = isCollapsed ? '展开侧边栏' : '折叠侧边栏';
+        });
+        
+        // 侧边栏切换（移动端）
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+        
+        // 搜索功能
+        const searchInput = document.getElementById('docs-search-input');
+        const navItems = document.querySelectorAll('.docs-nav-item');
+        
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            navItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        // 导航项点击高亮
+        navItems.forEach(item => {
+            const link = item.querySelector('a');
+            link.addEventListener('click', () => {
+                // 移除所有活动状态
+                navItems.forEach(i => i.querySelector('a').classList.remove('active'));
+                // 添加当前活动状态
+                link.classList.add('active');
+                // 更新面包屑
+                document.getElementById('current-doc-title').textContent = link.textContent;
+                // 移动端自动收起侧边栏
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        });
+        
+        // iframe加载监听
+        const docsFrame = document.getElementById('docs-frame');
+        docsFrame.addEventListener('load', () => {
+            try {
+                const frameDoc = docsFrame.contentDocument || docsFrame.contentWindow.document;
+                const title = frameDoc.title || '文档';
+                document.getElementById('current-doc-title').textContent = title;
+            } catch (e) {
+                // 跨域限制，忽略
+            }
+        });
+        
+        // 支持URL参数加载指定页面
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page');
+            
+            if (page) {
+                // 加载指定页面
+                const fullPath = 'assets/html/' + page;
+                docsFrame.src = fullPath;
+                
+                // 尝试高亮对应的侧边栏项
+                setTimeout(() => {
+                    const navLinks = document.querySelectorAll('.docs-nav-item a');
+                    navLinks.forEach(link => {
+                        const href = link.getAttribute('href');
+                        if (href && href.includes(page)) {
+                            link.classList.add('active');
+                            link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>

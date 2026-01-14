@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS2 Humble 教学文档</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>ROS2 Humble 教学文档</h1>
+            <nav>
+                <ul>
+                    <li><a href="#course-catalogue">课程目录</a></li>
+                    <li><a href="#quick-links">快速链接</a></li>
+                    <li><a href="docs.html" class="nav-highlight">📚 官方文档</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- URL导航工具 -->
+            <div class="url-navigator">
+                <div class="url-nav-header">
+                    <span class="url-icon">🔗</span>
+                    <span>官方文档URL快速跳转</span>
+                </div>
+                <div class="url-nav-input-group">
+                    <input type="text" id="docs-url-input" placeholder="粘贴官方文档URL，例如: https://docs.ros.org/en/humble/Tutorials/Intermediate/Rosdep.html" class="url-input">
+                    <button id="navigate-btn" class="url-btn">跳转</button>
+                </div>
+                <div id="url-result" class="url-result"></div>
+            </div>
+            
+            <section id="course-catalogue" class="section">
+                <h2>📋 ROS2 Humble 课程目录</h2>
+                <div class="content">
+                    <p class="intro-text">本课程按照26个章节系统讲解ROS2 Humble的各个知识点，每个章节都链接到对应的文档内容。</p>
+                    <div class="table-container">
+                        <table class="course-table">
+                            <thead>
+                                <tr>
+                                    <th>节次</th>
+                                    <th>课程内容</th>
+                                    <th>文档链接</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>ROS2 概况与特色</td><td><a href="docs.html?page=Concepts/Basic.html">Basic Concepts</a></td></tr>
+                                <tr><td>2</td><td>ROS2 安装及设置</td><td><a href="docs.html?page=Installation/Alternatives/Ubuntu-Development-Setup.html">Ubuntu Development Setup</a></td></tr>
+                                <tr><td>3</td><td>基本命令行工具</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools.html">CLI Tools</a></td></tr>
+                                <tr><td>4</td><td>制作 ROS2 程序包</td><td><a href="docs.html?page=Tutorials/Beginner-Client-Libraries/Creating-Your-First-ROS2-Package.html">Creating Package</a></td></tr>
+                                <tr><td>5</td><td>ROS2 话题</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Topics/Understanding-ROS2-Topics.html">Understanding Topics</a></td></tr>
+                                <tr><td>6</td><td>ROS2 服务</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Services/Understanding-ROS2-Services.html">Understanding Services</a></td></tr>
+                                <tr><td>7</td><td>自定义接口</td><td><a href="docs.html?page=Tutorials/Beginner-Client-Libraries/Custom-ROS2-Interfaces.html">Custom Interfaces</a></td></tr>
+                                <tr><td>8</td><td>ROS2 参数</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Parameters/Understanding-ROS2-Parameters.html">Understanding Parameters</a></td></tr>
+                                <tr><td>9</td><td>ROS2 启动文件</td><td><a href="docs.html?page=Tutorials/Intermediate/Launch/Launch-Main.html">Launch Files</a></td></tr>
+                                <tr><td>10</td><td>ROS2 常用工具</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools.html">CLI Tools</a></td></tr>
+                                <tr><td>11</td><td>ROS2 依赖关系管理</td><td><a href="docs.html?page=Tutorials/Intermediate/Rosdep.html">Rosdep</a></td></tr>
+                                <tr><td>12</td><td>ROS2 动作</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html">Understanding Actions</a></td></tr>
+                                <tr><td>13</td><td>ROS2 组件</td><td><a href="docs.html?page=Tutorials/Intermediate/Composition.html">Composition</a></td></tr>
+                                <tr><td>14</td><td>ROS2 动态参数</td><td><a href="docs.html?page=Tutorials/Intermediate/Monitoring-For-Parameter-Changes-CPP.html">Parameter Monitoring</a></td></tr>
+                                <tr><td>15</td><td>TF2 坐标系</td><td><a href="docs.html?page=Tutorials/Intermediate/Tf2/Tf2-Main.html">TF2</a></td></tr>
+                                <tr><td>16</td><td>RViz2 三维可视化</td><td><a href="docs.html?page=Tutorials/Intermediate/RViz/RViz-Main.html">RViz2</a></td></tr>
+                                <tr><td>17</td><td>URDF 机器人建模</td><td><a href="docs.html?page=Tutorials/Intermediate/URDF/URDF-Main.html">URDF</a></td></tr>
+                                <tr><td>18</td><td>Gazebo 仿真</td><td><a href="docs.html?page=Tutorials/Advanced/Simulators/Gazebo/Simulation-Gazebo.html">Gazebo Simulation</a></td></tr>
+                                <tr><td>19</td><td>Webots 仿真</td><td><a href="docs.html?page=Tutorials/Advanced/Simulators/Webots/Setting-Up-Simulation-Webots-Basic.html">Webots Simulation</a></td></tr>
+                                <tr><td>20</td><td>Topic Statistics</td><td><a href="docs.html?page=Tutorials/Advanced/Topic-Statistics-Tutorial.html">Topic Statistics</a></td></tr>
+                                <tr><td>21</td><td>中间件（DDS/RMW）</td><td><a href="docs.html?page=Installation/RMW-Implementations.html">RMW Implementations</a></td></tr>
+                                <tr><td>22</td><td>ROS2 安全</td><td><a href="docs.html?page=Tutorials/Advanced/Security/Introducing-ros2-security.html">Security</a></td></tr>
+                                <tr><td>23</td><td>服务质量（QoS）</td><td><a href="docs.html?page=Concepts/Intermediate/About-Quality-of-Service-Settings.html">QoS Settings</a></td></tr>
+                                <tr><td>24</td><td>Memory Allocator</td><td><a href="docs.html?page=Tutorials/Advanced/Allocator-Template-Tutorial.html">Memory Allocator</a></td></tr>
+                                <tr><td>25</td><td>通信与日志</td><td><a href="docs.html?page=Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html">Recording Data</a></td></tr>
+                                <tr><td>26</td><td>Recording from Node</td><td><a href="docs.html?page=Tutorials/Advanced/Recording-A-Bag-From-Your-Own-Node-CPP.html">Recording from Node</a></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="quick-links" class="section">
+                <h2>🔗 快速链接</h2>
+                <div class="content">
+                    <div class="concept-grid">
+                        <a href="docs.html?page=Installation.html" class="concept-card">
+                            <h3>⬇️ 安装指南</h3>
+                            <p>在各种平台上安装ROS2 Humble</p>
+                        </a>
+                        <a href="docs.html?page=Concepts/Basic.html" class="concept-card">
+                            <h3>💡 基础概念</h3>
+                            <p>理解节点、话题、服务、动作等核心概念</p>
+                        </a>
+                        <a href="docs.html?page=Tutorials.html" class="concept-card">
+                            <h3>🎓 教程文档</h3>
+                            <p>从入门到精通的完整教程</p>
+                        </a>
+                        <a href="docs.html" class="concept-card">
+                            <h3>📚 官方文档</h3>
+                            <p>浏览完整的ROS2官方文档库</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 官方文档入口 -->
+            <section id="docs" class="section docs-entry-section">
+                <h2>📚 ROS2 官方文档</h2>
+                <div class="content">
+                    <p class="docs-intro">完整的ROS2官方文档，涵盖安装、教程、指南等所有内容。</p>
+                    <div class="docs-grid">
+                        <a href="docs.html" class="docs-card">
+                            <div class="docs-card-icon">📖</div>
+                            <h3>完整文档</h3>
+                            <p>浏览所有ROS2官方文档</p>
+                        </a>
+                        <a href="docs.html?page=Installation.html" class="docs-card">
+                            <div class="docs-card-icon">⬇️</div>
+                            <h3>安装指南</h3>
+                            <p>在各平台安装ROS2</p>
+                        </a>
+                        <a href="docs.html?page=Tutorials.html" class="docs-card">
+                            <div class="docs-card-icon">🎓</div>
+                            <h3>官方教程</h3>
+                            <p>从入门到精通的教程</p>
+                        </a>
+                        <a href="docs.html?page=Concepts.html" class="docs-card">
+                            <div class="docs-card-icon">💡</div>
+                            <h3>核心概念</h3>
+                            <p>深入理解ROS2架构</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- AI 聊天窗口 -->
+    <div id="ai-chat-widget" class="ai-chat-widget">
+        <!-- 右下角拉伸手柄 -->
+        <div class="resize-handle resize-handle-corner-br">
+            <span class="resize-icon">⋰</span>
+        </div>
+        
+        <div class="chat-header" id="chat-header">
+            <div class="chat-title">
+                <span class="ai-icon">🤖</span>
+            </div>
+            <div class="chat-controls">
+                <select id="model-select" class="model-select" title="选择模型">
+                    <option value="qwen-max">通义千问 Max</option>
+                </select>
+                <button id="clear-history-btn" class="control-btn" title="清除历史">🗑️</button>
+                <button id="minimize-btn" class="control-btn" title="最小化">━</button>
+                <button id="close-btn" class="control-btn" title="关闭">✕</button>
+            </div>
+        </div>
+        
+        <div class="chat-body" id="chat-body">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message ai-message">
+                    <div class="message-content">
+                        <p>你好！我可以帮你解答ROS2相关的问题，支持文字和图片输入。</p>
+                        <p><small>💡 提示：在标题栏右键点击可配置API</small></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+                <button id="image-upload-btn" class="image-upload-btn" title="上传图片">📎</button>
+                <input type="text" id="chat-input" placeholder="输入你的问题..." class="chat-input">
+                <button id="send-btn" class="send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天触发按钮 -->
+    <button id="chat-trigger" class="chat-trigger">
+        <span class="ai-icon">🤖</span>
+        <span>AI助手</span>
+    </button>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 ROS2 Humble 教学文档. 基于 <a href="https://github.com/ros2/ros2" target="_blank">ROS2</a> 开源项目.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/url-navigator.js"></script>
+    <script src="assets/js/chat-widget-enhanced.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

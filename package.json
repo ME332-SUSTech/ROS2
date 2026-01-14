@@ -1,0 +1,29 @@
+{
+  "name": "ros2-tutorial-site",
+  "version": "1.0.0",
+  "description": "ROS2 Humble教学文档网站 - 带有AI聊天助手的交互式学习平台",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "ros2",
+    "robotics",
+    "tutorial",
+    "ai-chat",
+    "education",
+    "humble"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/your-repo-name.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/your-repo-name/issues"
+  },
+  "homepage": "https://your-username.github.io/your-repo-name/ROS2/"
+}

@@ -1,0 +1,79 @@
+{
+  "aiModels": {
+    "gpt-4": {
+      "name": "GPT-4",
+      "description": "最强大的语言模型，适合复杂问题",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "enabled": false,
+      "requiresApiKey": true,
+      "icon": "🧠"
+    },
+    "gpt-3.5": {
+      "name": "GPT-3.5",
+      "description": "快速响应，适合一般问题",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "enabled": false,
+      "requiresApiKey": true,
+      "icon": "⚡"
+    },
+    "claude": {
+      "name": "Claude",
+      "description": "擅长代码分析和技术问题",
+      "endpoint": "https://api.anthropic.com/v1/messages",
+      "enabled": false,
+      "requiresApiKey": true,
+      "icon": "🔍"
+    },
+    "gemini": {
+      "name": "Gemini",
+      "description": "Google最新模型，多模态能力强",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+      "enabled": false,
+      "requiresApiKey": true,
+      "icon": "🌟"
+    }
+  },
+  "defaultModel": "gpt-4",
+  "mockEnabled": true,
+  "chatConfig": {
+    "maxMessages": 50,
+    "typingDelayMin": 1000,
+    "typingDelayMax": 3000,
+    "autoScroll": true,
+    "soundEnabled": true
+  },
+  "ros2Topics": [
+    "ROS2基础概念",
+    "节点和话题",
+    "服务和动作",
+    "参数系统",
+    "Launch文件",
+    "包和工作空间",
+    "传感器数据处理",
+    "机器人导航",
+    "URDF建模",
+    "Gazebo仿真"
+  ],
+  "quickReplies": [
+    {
+      "text": "如何创建ROS2节点？",
+      "category": "基础"
+    },
+    {
+      "text": "什么是ROS2话题？",
+      "category": "基础"
+    },
+    {
+      "text": "如何安装ROS2 Humble？",
+      "category": "安装"
+    },
+    {
+      "text": "Launch文件怎么写？",
+      "category": "进阶"
+    },
+    {
+      "text": "如何调试ROS2节点？",
+      "category": "调试"
+    }
+  ]
+}
