@@ -7,10 +7,22 @@
     <link rel="stylesheet" href="assets/css/styles.css">
     <style>
         /* 文档浏览页面专用样式 */
+        html {
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        body {
+            overflow: hidden;
+            height: 100%;
+        }
+        
         .docs-container {
             display: flex;
             margin-top: 100px;
-            min-height: calc(100vh - 100px);
+            margin-left: 300px;
+            height: calc(100vh - 100px);
+            overflow: hidden;
         }
         
         .docs-sidebar {
@@ -23,6 +35,7 @@
             bottom: 0;
             left: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             z-index: 50;
             transition: transform 0.3s ease;
         }
@@ -35,211 +48,14 @@
             color: #4a5568;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid #2f6c9d;
         }
         
         .docs-nav {
             list-style: none;
         }
         
-        .docs-nav-item {
-            margin-bottom: 0.25rem;
-        }
-        
-        .docs-nav-item a {
-            display: block;
-            padding: 0.5rem 0.75rem;
-            color: #4a5568;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-        
-        .docs-nav-item a:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        .docs-nav-item a.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .docs-nav-section {
-            margin-top: 1.5rem;
-        }
-        
-        .docs-nav-section h4 {
-            color: #667eea;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-            padding-left: 0.75rem;
-        }
-        
-        .docs-content {
-            flex: 1;
-            margin-left: 300px;
-            padding: 2rem;
-            transition: margin-left 0.3s ease;
-        }
-        
-        .docs-content.expanded {
-            margin-left: 0;
-        }
-        
-        .docs-frame-container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-            min-height: 80vh;
-        }
-        
-        .docs-frame {
-            width: 100%;
-            height: 85vh;
-            border: none;
-        }
-        
-        .docs-search {
-            margin-bottom: 1rem;
-        }
-        
-        .docs-search input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            transition: border-color 0.2s;
-        }
-        
-        .docs-search input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .docs-breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 0.9rem;
-        }
-        
-        .docs-breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .docs-breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .docs-breadcrumb span {
-            color: #718096;
-        }
-        
-        .sidebar-toggle {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 200;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 1rem;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        /* 桌面端侧边栏折叠按钮 */
-        .sidebar-collapse-btn {
-            position: fixed;
-            top: 110px;
-            left: 310px;
-            z-index: 100;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            width: 32px;
-            height: 48px;
-            border-radius: 0 8px 8px 0;
-            cursor: pointer;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-collapse-btn:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-            box-shadow: 2px 2px 12px rgba(0,0,0,0.25);
-        }
-        
-        .sidebar-collapse-btn.collapsed {
-            left: 10px;
-        }
-        
-        @media (max-width: 768px) {
-            .docs-sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s;
-            }
-            
-            .docs-sidebar.active {
-                transform: translateX(0);
-            }
-            
-            .docs-content {
-                margin-left: 0;
-            }
-            
-            .sidebar-toggle {
-                display: block;
-            }
-        }
-        
-        /* 加载动画 */
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 50vh;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #e2e8f0;
-            border-top: 5px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <header class="header">
-        <div class="container">
-            <h1>ROS2 Humble 教学文档</h1>
-            <nav>
-                <ul>
-                    <li><a href="index.html">首页</a></li>
+        .docs-nav-item { margin-bottom: 0.25rem; }  .docs-nav-item a { display: block; padding: 0.5rem 0.75rem; color: #4a5568; text-decoration: none; border-radius: 5px; transition: all 0.2s; font-size: 0.9rem; }  .docs-nav-item a:hover { background: #2f6c9d; color: white; }  .docs-nav-item a.active { background: linear-gradient(135deg, #17324f 0%, #2f6c9d 100%); color: white; }  .docs-nav-section { margin-top: 1.5rem; }  .docs-nav-section h4 { color: #2f6c9d; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; padding-left: 0.75rem; }  .docs-content { flex: 1; padding: 1.5rem; transition: all 0.3s ease; overflow: hidden; display: flex; flex-direction: column; width: 100%; min-width: 0; box-sizing: border-box; }   .docs-frame-container { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }  .docs-breadcrumb { flex-shrink: 0; }  .docs-frame { width: 100%; height: 100%; border: none; flex: 1; }  .docs-search { margin-bottom: 1rem; }  .docs-search input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 5px; font-size: 0.9rem; transition: border-color 0.2s; }  .docs-search input:focus { outline: none; border-color: #2f6c9d; box-shadow: 0 0 0 3px rgba(47, 108, 157, 0.15); }  .docs-breadcrumb { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #f8f9fa; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; flex-shrink: 0; }  .docs-breadcrumb a { color: #2f6c9d; text-decoration: none; }  .docs-breadcrumb a:hover { text-decoration: underline; }  .docs-breadcrumb span { color: #718096; }  .sidebar-toggle { display: none; position: fixed; bottom: 20px; left: 20px; z-index: 200; background: linear-gradient(135deg, #17324f 0%, #2f6c9d 100%); color: white; border: none; padding: 1rem; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }  /* 桌面端侧边栏折叠按钮 */ .sidebar-collapse-btn { position: fixed; top: 110px; left: 310px; z-index: 100; background: linear-gradient(135deg, #17324f 0%, #2f6c9d 100%); color: white; border: none; width: 32px; height: 48px; border-radius: 0 8px 8px 0; cursor: pointer; box-shadow: 2px 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.3s ease; }  .sidebar-collapse-btn:hover { background: linear-gradient(135deg, #2f6c9d 0%, #17324f 100%); box-shadow: 2px 2px 12px rgba(0,0,0,0.25); }  .sidebar-collapse-btn.collapsed { left: 10px; }  @media (max-width: 768px) { .docs-sidebar { transform: translateX(-100%); transition: transform 0.3s; }  .docs-sidebar.active { transform: translateX(0); }  .docs-container { margin-left: 0; }  .sidebar-toggle { display: block; } }  /* 加载动画 */ .loading { display: flex; justify-content: center; align-items: center; height: 50vh; }  .loading-spinner { width: 50px; height: 50px; border: 5px solid #e2e8f0; border-top: 5px solid #2f6c9d; border-radius: 50%; animation: spin 1s linear infinite; }  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style> </head> <body> <header class="header"> <div class="container"> <h1>ROS2 Humble 教学文档</h1> <nav> <ul> <li><a href="index.html">首页</a></li>
                     <li><a href="docs.html" class="active">官方文档</a></li>
                     <li><a href="index.html#tutorials">教程</a></li>
                     <li><a href="index.html#examples">示例</a></li>
@@ -259,80 +75,80 @@
             <div class="docs-nav-section">
                 <h4>🚀 入门</h4>
                 <ul class="docs-nav" id="getting-started-nav">
-                    <li class="docs-nav-item"><a href="assets/html/index.html" target="docs-frame">文档首页</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Installation.html" target="docs-frame">安装指南</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Concepts.html" target="docs-frame">核心概念</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/index.html" target="docs-frame">文档首页</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Installation.html" target="docs-frame">安装指南</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Concepts.html" target="docs-frame">核心概念</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>📖 教程</h4>
                 <ul class="docs-nav" id="tutorials-nav">
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials.html" target="docs-frame">教程总览</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-CLI-Tools.html" target="docs-frame">CLI工具入门</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-Client-Libraries.html" target="docs-frame">客户端库入门</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Intermediate.html" target="docs-frame">中级教程</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Advanced.html" target="docs-frame">高级教程</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Tutorials/Demos.html" target="docs-frame">演示示例</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials.html" target="docs-frame">教程总览</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-CLI-Tools.html" target="docs-frame">CLI工具入门</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials/Beginner-Client-Libraries.html" target="docs-frame">客户端库入门</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials/Intermediate.html" target="docs-frame">中级教程</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials/Advanced.html" target="docs-frame">高级教程</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Tutorials/Demos.html" target="docs-frame">演示示例</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>🛠️ 指南</h4>
                 <ul class="docs-nav" id="guides-nav">
-                    <li class="docs-nav-item"><a href="assets/html/How-To-Guides.html" target="docs-frame">使用指南</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Colcon-Tutorial.html" target="docs-frame">Colcon构建工具</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Composition.html" target="docs-frame">组件化</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Logging.html" target="docs-frame">日志系统</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/How-To-Guides.html" target="docs-frame">使用指南</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Colcon-Tutorial.html" target="docs-frame">Colcon构建工具</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Composition.html" target="docs-frame">组件化</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Logging.html" target="docs-frame">日志系统</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>📡 通信</h4>
                 <ul class="docs-nav" id="communication-nav">
-                    <li class="docs-nav-item"><a href="assets/html/About-ROS-Interfaces.html" target="docs-frame">ROS接口</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/About-ROS-2-Parameters.html" target="docs-frame">参数系统</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Quality-of-Service.html" target="docs-frame">QoS服务质量</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/About-Topic-Statistics.html" target="docs-frame">话题统计</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/About-ROS-Interfaces.html" target="docs-frame">ROS接口</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/About-ROS-2-Parameters.html" target="docs-frame">参数系统</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Quality-of-Service.html" target="docs-frame">QoS服务质量</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/About-Topic-Statistics.html" target="docs-frame">话题统计</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>🔧 配置</h4>
                 <ul class="docs-nav" id="config-nav">
-                    <li class="docs-nav-item"><a href="assets/html/DDS-and-ROS-middleware-implementations.html" target="docs-frame">DDS中间件</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/FastDDS-Configuration.html" target="docs-frame">FastDDS配置</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Working-with-Eclipse-CycloneDDS.html" target="docs-frame">CycloneDDS</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Discovery-Server.html" target="docs-frame">发现服务器</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/DDS-and-ROS-middleware-implementations.html" target="docs-frame">DDS中间件</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/FastDDS-Configuration.html" target="docs-frame">FastDDS配置</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Working-with-Eclipse-CycloneDDS.html" target="docs-frame">CycloneDDS</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Discovery-Server.html" target="docs-frame">发现服务器</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>⚡ 高级主题</h4>
                 <ul class="docs-nav" id="advanced-nav">
-                    <li class="docs-nav-item"><a href="assets/html/Real-Time-Programming.html" target="docs-frame">实时编程</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Intra-Process-Communication.html" target="docs-frame">进程内通信</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Managed-Nodes.html" target="docs-frame">托管节点</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Allocator-Template-Tutorial.html" target="docs-frame">内存分配器</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Real-Time-Programming.html" target="docs-frame">实时编程</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Intra-Process-Communication.html" target="docs-frame">进程内通信</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Managed-Nodes.html" target="docs-frame">托管节点</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Allocator-Template-Tutorial.html" target="docs-frame">内存分配器</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>📦 发布与版本</h4>
                 <ul class="docs-nav" id="releases-nav">
-                    <li class="docs-nav-item"><a href="assets/html/Releases.html" target="docs-frame">版本发布</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Releasing-a-ROS-2-package-with-bloom.html" target="docs-frame">包发布指南</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Migration-Guide.html" target="docs-frame">迁移指南</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Releases.html" target="docs-frame">版本发布</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Releasing-a-ROS-2-package-with-bloom.html" target="docs-frame">包发布指南</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Migration-Guide.html" target="docs-frame">迁移指南</a></li>
                 </ul>
             </div>
             
             <div class="docs-nav-section">
                 <h4>🔗 相关资源</h4>
                 <ul class="docs-nav" id="resources-nav">
-                    <li class="docs-nav-item"><a href="assets/html/Related-Projects.html" target="docs-frame">相关项目</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Contributing.html" target="docs-frame">贡献指南</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Glossary.html" target="docs-frame">术语表</a></li>
-                    <li class="docs-nav-item"><a href="assets/html/Contact.html" target="docs-frame">联系方式</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Related-Projects.html" target="docs-frame">相关项目</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Contributing.html" target="docs-frame">贡献指南</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Glossary.html" target="docs-frame">术语表</a></li>
+                                        <li class="docs-nav-item"><a href="assets/html/Contact.html" target="docs-frame">联系方式</a></li>
                 </ul>
             </div>
         </aside>
@@ -360,24 +176,175 @@
         ‹
     </button>
 
+    <!-- AI 聊天窗口（新的AI助手） -->
+    <div id="ai-chat-widget" class="ai-chat-widget">
+        <div class="resize-handle resize-handle-corner-br">
+            <span class="resize-icon">⋰</span>
+        </div>
+
+        <div class="chat-header" id="chat-header">
+            <div class="chat-title">
+                <span class="ai-icon">🤖</span>
+            </div>
+            <div class="chat-controls">
+                <select id="model-select" class="model-select" title="选择模型">
+                    <option value="qwen-max">通义千问 Max</option>
+                </select>
+                <button id="relearn-btn" class="control-btn" title="重新开始学习进度评估">🔄</button>
+                <button id="settings-btn" class="control-btn" title="设置">⚙</button>
+                <button id="clear-history-btn" class="control-btn" title="清除历史">🗑️</button>
+                <button id="minimize-btn" class="control-btn" title="最小化">━</button>
+                <button id="close-btn" class="control-btn" title="关闭">✕</button>
+            </div>
+        </div>
+
+        <div class="chat-body" id="chat-body">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message ai-message">
+                    <div class="message-content">
+                        <p>你好！我可以帮你解答ROS2相关的问题，支持文字和图片输入。</p>
+                        <p><small>💡 提示：在标题栏右键点击可配置API</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+                <div class="chat-input-shell">
+                    <button id="image-upload-btn" class="image-upload-btn" title="上传图片">📎</button>
+                    <input type="text" id="chat-input" placeholder="输入问题... 试试 /code /plan /teacher" class="chat-input">
+                    <button id="send-btn" class="send-btn" title="发送">↑</button>
+                </div>
+                <div id="chat-command-hints" class="chat-command-hints">
+                    <span id="chat-command-mode" class="chat-command-mode">当前模式：通用</span>
+                    <button class="command-chip" data-cmd="/code">/code</button>
+                    <button class="command-chip" data-cmd="/plan">/plan</button>
+                    <button class="command-chip" data-cmd="/teacher">/teacher</button>
+                    <button class="command-chip" data-cmd="/normal">/normal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="chat-trigger" class="chat-trigger">
+        <span class="ai-icon">🤖</span>
+        <span>AI助手</span>
+    </button>
+
+    <div id="learning-hint" class="learning-hint" role="status" aria-live="polite">
+        <div class="learning-hint-text">可开启学习进度引导，AI会按你的基础定制本次对话。</div>
+        <div class="learning-hint-actions">
+            <button id="learning-hint-open-settings" class="learning-hint-btn">去设置</button>
+            <button id="learning-hint-close" class="learning-hint-close" aria-label="关闭提示">✕</button>
+        </div>
+    </div>
+
+    <script src="assets/js/api-config.js"></script>
+    <script src="assets/js/chat-widget-enhanced.js"></script>
+        // 处理主页链接中的 ?page= 参数
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageParam = urlParams.get('page');
+            
+            if (pageParam) {
+                const docsFrame = document.getElementById('docs-frame');
+                // 确保路径包含 assets/html/ 前缀
+                let filePath = pageParam;
+                if (!filePath.startsWith('assets/html/')) {
+                    filePath = 'assets/html/' + filePath;
+                }
+                docsFrame.src = filePath;
+                
+                // 从路径中提取文档标题
+                const titleParts = filePath.split('/');
+                const lastPart = titleParts[titleParts.length - 1];
+                const docTitle = lastPart.replace('.html', '').replace(/-/g, ' ');
+                document.getElementById('current-doc-title').textContent = docTitle;
+            }
+        });
+    </script>
+
     <script>
         // 桌面端侧边栏折叠功能
         const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
         const sidebar = document.getElementById('docs-sidebar');
-        const docsContent = document.querySelector('.docs-content');
+        const docsContainer = document.querySelector('.docs-container');
         
         sidebarCollapseBtn.addEventListener('click', () => {
             const isCollapsed = sidebar.classList.toggle('collapsed');
-            docsContent.classList.toggle('expanded');
             sidebarCollapseBtn.classList.toggle('collapsed');
+            
+            // 根据侧边栏状态调整容器的margin-left
+            if (isCollapsed) {
+                docsContainer.style.marginLeft = '0';
+            } else {
+                docsContainer.style.marginLeft = '300px';
+            }
             
             // 更新按钮图标
             sidebarCollapseBtn.textContent = isCollapsed ? '›' : '‹';
             sidebarCollapseBtn.title = isCollapsed ? '展开侧边栏' : '折叠侧边栏';
         });
         
-        // 侧边栏切换（移动端）
-        const sidebarToggle = document.getElementById('sidebar-toggle');
+        // iframe 内容自适应宽度处理
+        const docsFrame = document.getElementById('docs-frame');
+        
+        function adjustIframeContentWidth() {
+            try {
+                const iframeDoc = docsFrame.contentDocument || docsFrame.contentWindow.document;
+                if (!iframeDoc) return;
+                
+                // 扩展Sphinx文档的max-width限制，使其利用全部可用空间
+                // 而不隐藏或修改导航结构
+                
+                // 找到Sphinx的主容器，移除max-width限制
+                const mainWrapper = iframeDoc.querySelector('div.wy-nav-content-wrap');
+                if (mainWrapper) {
+                    mainWrapper.style.maxWidth = 'none';
+                    mainWrapper.style.width = '100%';
+                }
+                
+                // 扩展内容容器
+                const navContent = iframeDoc.querySelector('div.wy-nav-content');
+                if (navContent) {
+                    navContent.style.maxWidth = 'none';
+                    navContent.style.width = '100%';
+                    navContent.style.marginLeft = 'auto';
+                    navContent.style.marginRight = 'auto';
+                }
+                
+                // 扩展rst-content容器
+                const rstContent = iframeDoc.querySelector('div.rst-content');
+                if (rstContent) {
+                    rstContent.style.maxWidth = 'none';
+                }
+                
+                // 调整body和html避免水平滚动条
+                if (iframeDoc.body) {
+                    iframeDoc.body.style.overflowX = 'hidden';
+                }
+                if (iframeDoc.documentElement) {
+                    iframeDoc.documentElement.style.overflowX = 'hidden';
+                }
+            } catch (e) {
+                // 跨域限制，忽略
+            }
+        }
+        
+        // iframe 加载后调整
+        docsFrame.addEventListener('load', () => {
+            adjustIframeContentWidth();
+            // 延迟调整，确保内容完全加载
+            setTimeout(adjustIframeContentWidth, 500);
+        });
+        
+        // 初始调整
+        if (docsFrame.contentDocument) {
+            adjustIframeContentWidth();
+        }
+        
+        // 监听窗口尺寸变化
+        window.addEventListener('resize', adjustIframeContentWidth);
         
         sidebarToggle.addEventListener('click', () => {
             sidebar.classList.toggle('active');
@@ -385,72 +352,30 @@
         
         // 搜索功能
         const searchInput = document.getElementById('docs-search-input');
-        const navItems = document.querySelectorAll('.docs-nav-item');
-        
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            navItems.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-        
-        // 导航项点击高亮
-        navItems.forEach(item => {
-            const link = item.querySelector('a');
-            link.addEventListener('click', () => {
-                // 移除所有活动状态
-                navItems.forEach(i => i.querySelector('a').classList.remove('active'));
-                // 添加当前活动状态
-                link.classList.add('active');
-                // 更新面包屑
-                document.getElementById('current-doc-title').textContent = link.textContent;
-                // 移动端自动收起侧边栏
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('active');
-                }
-            });
-        });
-        
-        // iframe加载监听
-        const docsFrame = document.getElementById('docs-frame');
-        docsFrame.addEventListener('load', () => {
-            try {
-                const frameDoc = docsFrame.contentDocument || docsFrame.contentWindow.document;
-                const title = frameDoc.title || '文档';
-                document.getElementById('current-doc-title').textContent = title;
-            } catch (e) {
-                // 跨域限制，忽略
-            }
-        });
-        
-        // 支持URL参数加载指定页面
-        window.addEventListener('DOMContentLoaded', () => {
+        const navItems = document.querySelectorAll('.docs-nav-item');  searchInput.addEventListener('input', (e) => { const searchTerm = e.target.value.toLowerCase(); navItems.forEach(item => { const text = item.textContent.toLowerCase(); if (text.includes(searchTerm)) { item.style.display = 'block'; } else { item.style.display = 'none'; } }); });  // 导航项点击高亮 navItems.forEach(item => { const link = item.querySelector('a'); link.addEventListener('click', () => { // 移除所有活动状态 navItems.forEach(i => i.querySelector('a').classList.remove('active')); // 添加当前活动状态 link.classList.add('active'); // 更新面包屑 document.getElementById('current-doc-title').textContent = link.textContent; // 移动端自动收起侧边栏 if (window.innerWidth <= 768) { sidebar.classList.remove('active'); } }); });  function removeLegacyChatInFrame() { try { const frameDoc = docsFrame.contentDocument || docsFrame.contentWindow.document; if (!frameDoc) return;  const legacySelectors = [ '#ai-chat-widget', '#chat-trigger', '#learning-hint', '.ai-chat-widget', '.chat-trigger', '.learning-hint', 'div[id*="ai-chat"]', 'div[class*="ai-chat"]' ];  let removedCount = 0; legacySelectors.forEach((selector) => { frameDoc.querySelectorAll(selector).forEach((el) => { try { el.remove(); removedCount++; } catch(e) { // 某些受保护的元素可能无法删除 } }); });  if (removedCount > 0) { console.log(`✓ 已清理 ${removedCount} 个遗留AI助手组件`); }  return removedCount; } catch (e) { // 跨域限制或其他错误，忽略 return 0; } }  docsFrame.addEventListener('load', () => { // 等待iframe完全加载，然后清理重复的AI助手 removeLegacyChatInFrame();  // 多次延迟调用确保所有内容加载完成 setTimeout(() => removeLegacyChatInFrame(), 300); setTimeout(() => removeLegacyChatInFrame(), 800); setTimeout(() => removeLegacyChatInFrame(), 1500);  // 监听iframe中的DOM变化，实时清理可能新添加的AI widget try { const frameDoc = docsFrame.contentDocument || docsFrame.contentWindow.document; if (frameDoc) { // 使用MutationObserver监听DOM变化 const observer = new MutationObserver(() => { const removed = removeLegacyChatInFrame(); // 如果发现了新的AI widget，继续监听 if (removed === 0) { // 如果100ms内没有新元素被添加，可以停止观察来节省资源 clearTimeout(observerTimeout); observerTimeout = setTimeout(() => { observer.disconnect(); console.log('✓ MutationObserver已停止监听'); }, 1000); } });  let observerTimeout = setTimeout(() => { observer.disconnect(); }, 5000); // 最多监听5秒  observer.observe(frameDoc.body || frameDoc.documentElement, { childList: true, subtree: true, attributes: false, attributeFilter: [], characterData: false, attributeOldValue: false, characterDataOldValue: false }); } } catch (e) { // 跨域或其他限制，MutationObserver不可用 }  try { const frameDoc = docsFrame.contentDocument || docsFrame.contentWindow.document; const title = frameDoc.title || '文档'; document.getElementById('current-doc-title').textContent = title; } catch (e) { // 跨域限制，忽略 } });  // 支持URL参数加载指定页面 window.addEventListener('DOMContentLoaded', () => { const urlParams = new URLSearchParams(window.location.search); const page = urlParams.get('page');  if (page) { // 加载指定页面 const normalizedPage = page.replace(/^assets\/html\//, ''); const fullPath = page.startsWith('assets/html/') ? page : 'assets/html/' + normalizedPage; docsFrame.src = fullPath;  // 尝试高亮对应的侧边栏项 setTimeout(() => { const navLinks = document.querySelectorAll('.docs-nav-item a'); navLinks.forEach(link => { const href = link.getAttribute('href') || ''; if (href.includes(page) || href.includes(normalizedPage)) { link.classList.add('active'); link.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }); }, 100); } }); </script>
+    <script>
+        (function() {
+            const docsFrame = document.getElementById('docs-frame');
+            if (!docsFrame) return;
+
             const urlParams = new URLSearchParams(window.location.search);
             const page = urlParams.get('page');
-            
-            if (page) {
-                // 加载指定页面
-                const fullPath = 'assets/html/' + page;
+            if (!page) return;
+
+            // 维护说明：主页和侧边栏传给这里的 page 必须保持为相对路径（例如 Tutorials/...html）。
+            // 不要在 index.html 和这里同时拼接 assets/html/，否则会把跳转重写成错误的默认文档页。
+            const normalizedPage = page.replace(/^assets\/html\//, '');
+            const fullPath = page.startsWith('assets/html/') ? page : 'assets/html/' + normalizedPage;
+
+            const applyPage = () => {
                 docsFrame.src = fullPath;
-                
-                // 尝试高亮对应的侧边栏项
-                setTimeout(() => {
-                    const navLinks = document.querySelectorAll('.docs-nav-item a');
-                    navLinks.forEach(link => {
-                        const href = link.getAttribute('href');
-                        if (href && href.includes(page)) {
-                            link.classList.add('active');
-                            link.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    });
-                }, 100);
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyPage, { once: true });
+            } else {
+                applyPage();
             }
-        });
+        })();
     </script>
-</body>
-</html>
+    <script>hljs.highlightAll();</script> </body> </html> 

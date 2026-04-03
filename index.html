@@ -71,7 +71,7 @@
                                 <tr><td>17</td><td>URDF 机器人建模</td><td><a href="docs.html?page=Tutorials/Intermediate/URDF/URDF-Main.html">URDF</a></td></tr>
                                 <tr><td>18</td><td>Gazebo 仿真</td><td><a href="docs.html?page=Tutorials/Advanced/Simulators/Gazebo/Simulation-Gazebo.html">Gazebo Simulation</a></td></tr>
                                 <tr><td>19</td><td>Webots 仿真</td><td><a href="docs.html?page=Tutorials/Advanced/Simulators/Webots/Setting-Up-Simulation-Webots-Basic.html">Webots Simulation</a></td></tr>
-                                <tr><td>20</td><td>Topic Statistics</td><td><a href="docs.html?page=Tutorials/Advanced/Topic-Statistics-Tutorial.html">Topic Statistics</a></td></tr>
+                                <tr><td>20</td><td>Topic Statistics</td><td><a href="docs.html?page=Tutorials/Advanced/Topic-Statistics-Tutorial/Topic-Statistics-Tutorial.html">Topic Statistics</a></td></tr>
                                 <tr><td>21</td><td>中间件（DDS/RMW）</td><td><a href="docs.html?page=Installation/RMW-Implementations.html">RMW Implementations</a></td></tr>
                                 <tr><td>22</td><td>ROS2 安全</td><td><a href="docs.html?page=Tutorials/Advanced/Security/Introducing-ros2-security.html">Security</a></td></tr>
                                 <tr><td>23</td><td>服务质量（QoS）</td><td><a href="docs.html?page=Concepts/Intermediate/About-Quality-of-Service-Settings.html">QoS Settings</a></td></tr>
@@ -155,6 +155,8 @@
                 <select id="model-select" class="model-select" title="选择模型">
                     <option value="qwen-max">通义千问 Max</option>
                 </select>
+                <button id="relearn-btn" class="control-btn" title="重新开始学习进度评估">🔄</button>
+                <button id="settings-btn" class="control-btn" title="设置">⚙</button>
                 <button id="clear-history-btn" class="control-btn" title="清除历史">🗑️</button>
                 <button id="minimize-btn" class="control-btn" title="最小化">━</button>
                 <button id="close-btn" class="control-btn" title="关闭">✕</button>
@@ -173,9 +175,18 @@
             
             <div class="chat-input-container">
                 <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
-                <button id="image-upload-btn" class="image-upload-btn" title="上传图片">📎</button>
-                <input type="text" id="chat-input" placeholder="输入你的问题..." class="chat-input">
-                <button id="send-btn" class="send-btn">发送</button>
+                <div class="chat-input-shell">
+                    <button id="image-upload-btn" class="image-upload-btn" title="上传图片">📎</button>
+                    <input type="text" id="chat-input" placeholder="输入问题... 试试 /code /plan /teacher" class="chat-input">
+                    <button id="send-btn" class="send-btn" title="发送">↑</button>
+                </div>
+                <div id="chat-command-hints" class="chat-command-hints">
+                    <span id="chat-command-mode" class="chat-command-mode">当前模式：通用</span>
+                    <button class="command-chip" data-cmd="/code">/code</button>
+                    <button class="command-chip" data-cmd="/plan">/plan</button>
+                    <button class="command-chip" data-cmd="/teacher">/teacher</button>
+                    <button class="command-chip" data-cmd="/normal">/normal</button>
+                </div>
             </div>
         </div>
     </div>
@@ -185,6 +196,14 @@
         <span class="ai-icon">🤖</span>
         <span>AI助手</span>
     </button>
+
+    <div id="learning-hint" class="learning-hint" role="status" aria-live="polite">
+        <div class="learning-hint-text">可开启学习进度引导，AI会按你的基础定制本次对话。</div>
+        <div class="learning-hint-actions">
+            <button id="learning-hint-open-settings" class="learning-hint-btn">去设置</button>
+            <button id="learning-hint-close" class="learning-hint-close" aria-label="关闭提示">✕</button>
+        </div>
+    </div>
 
     <footer class="footer">
         <div class="container">

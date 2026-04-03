@@ -13,6 +13,9 @@ class AIChat {
         this.imageUploadBtn = document.getElementById('image-upload-btn');
         this.imageInput = document.getElementById('image-input');
         this.clearHistoryBtn = document.getElementById('clear-history-btn');
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.relearnBtn = document.getElementById('relearn-btn');
+        this.learningHint = document.getElementById('learning-hint');
         
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
@@ -24,6 +27,13 @@ class AIChat {
         this.startSize = { width: 0, height: 0 };
         this.startPos = { x: 0, y: 0 };
         this.startWidgetPos = { bottom: 0, right: 0 };
+        this.widthLimitScale = 1.78;
+
+        // 绑定一次事件处理器，避免 add/removeEventListener 时引用不一致
+        this.boundHandleDrag = this.handleDrag.bind(this);
+        this.boundHandleDragEnd = this.handleDragEnd.bind(this);
+        this.boundHandleResize = this.handleResize.bind(this);
+        this.boundHandleResizeEnd = this.handleResizeEnd.bind(this);
         
         // API配置（支持OpenAI格式的各种服务）
         this.isAdminMode = localStorage.getItem('ai_admin_mode') === 'true';
@@ -40,6 +50,20 @@ class AIChat {
         }
         
         // 对话历史（支持跨页面保存）
+        this.baseSystemPrompt = '你是一个专业的ROS2助手，精通ROS2 Humble的各个方面，包括安装、配置、节点、话题、服务、参数、launch文件等。请用清晰、准确的中文回答用户的问题。';
+        this.customSystemPrompt = localStorage.getItem('ros2_custom_system_prompt') || '';
+        this.learningFlowEnabled = localStorage.getItem('ros2_learning_flow_enabled') !== 'false';
+        this.learningLesson = localStorage.getItem('ros2_learning_lesson') || localStorage.getItem('ros2_learning_progress') || '';
+        this.learningFoundation = localStorage.getItem('ros2_learning_foundation') || '';
+        this.waitingForLearningFoundation = false;
+        this.chatFontScale = localStorage.getItem('ros2_chat_font_scale') || 'normal';
+        this.chatTheme = localStorage.getItem('ros2_chat_theme') || 'control-blue';
+        this.aiTextColor = localStorage.getItem('ros2_ai_text_color') || '#111111';
+        this.userTextColor = localStorage.getItem('ros2_user_text_color') || '#29445b';
+        this.chatSurfaceColor = localStorage.getItem('ros2_chat_surface_color') || '#eef4f9';
+        this.learningGuideNoticeShown = false;
+        this.chatMode = localStorage.getItem('ros2_chat_mode') || 'general';
+
         this.conversationHistory = this.loadConversationHistory();
         this.uploadedImages = [];
         
@@ -49,7 +73,230 @@ class AIChat {
         this.updateModelOptions(); // 根据保存的provider加载模型
         this.restoreChatMessages();
         this.setupStorageListener(); // 监听跨页面同步
+        this.applyChatAppearance();
+        this.updateLearningHint();
         this.checkApiKey();
+    }
+
+    hasLearningProfile() {
+        return Boolean(this.learningLesson && this.learningFoundation);
+    }
+
+    getComposedSystemPrompt() {
+        const sections = [this.baseSystemPrompt];
+
+        if (this.hasLearningProfile()) {
+            sections.push(
+                '以下是用户学习背景（不可忽略）：',
+                `- ROS2学习章节：第${this.learningLesson}节`,
+                `- 当前学习基础：${this.learningFoundation}`,
+                '请基于以上背景给出更贴合层级的讲解，优先给出分步骤说明与ROS2命令示例。'
+            );
+        }
+
+        if (this.customSystemPrompt) {
+            sections.push(`额外系统指令：${this.customSystemPrompt}`);
+        }
+
+        const modeInstruction = this.getModeInstruction();
+        if (modeInstruction) {
+            sections.push(`当前会话模式：${modeInstruction}`);
+        }
+
+        return sections.join('\n\n');
+    }
+
+    getModeInstruction() {
+        const modeMap = {
+            general: '通用模式：按用户问题给出清晰、准确、可执行的回答。',
+            code: '代码分析模式：优先定位问题根因、给出最小修复方案、补充可运行代码与验证步骤。',
+            plan: '计划模式：先拆解目标，再输出里程碑、依赖和风险，给出可执行清单。',
+            teacher: '教学模式：以易老师口吻循序渐进讲解，先直觉解释，再给例子和练习。'
+        };
+        return modeMap[this.chatMode] || modeMap.general;
+    }
+
+    getModePlaceholder() {
+        const textMap = {
+            general: '输入问题... 试试 /code /plan /teacher',
+            code: '代码分析模式：描述报错、贴代码片段或输入 /normal 退出',
+            plan: '计划模式：输入你的目标、周期、资源约束',
+            teacher: '教学模式：输入你想学的知识点，我会分层讲解'
+        };
+        return textMap[this.chatMode] || textMap.general;
+    }
+
+    setChatMode(mode, withNotice = true) {
+        const allowed = ['general', 'code', 'plan', 'teacher'];
+        if (!allowed.includes(mode)) {
+            return false;
+        }
+
+        this.chatMode = mode;
+        localStorage.setItem('ros2_chat_mode', this.chatMode);
+        this.ensureSystemPromptInHistory();
+        this.saveConversationHistory();
+        this.updateCommandHintUI();
+
+        if (withNotice) {
+            const labelMap = {
+                general: '通用模式',
+                code: '代码分析模式',
+                plan: '计划模式',
+                teacher: '教学模式（易老师口吻）'
+            };
+            this.addSystemMessage(`✅ 已切换到${labelMap[mode]}。`);
+        }
+
+        return true;
+    }
+
+    updateCommandHintUI() {
+        if (this.chatInput) {
+            this.chatInput.placeholder = this.getModePlaceholder();
+        }
+
+        const modeLabel = document.getElementById('chat-command-mode');
+        if (modeLabel) {
+            const labelMap = {
+                general: '当前模式：通用',
+                code: '当前模式：代码分析',
+                plan: '当前模式：计划',
+                teacher: '当前模式：教学'
+            };
+            modeLabel.textContent = labelMap[this.chatMode] || labelMap.general;
+        }
+    }
+
+    ensureSystemPromptInHistory() {
+        const content = this.getComposedSystemPrompt();
+
+        if (!Array.isArray(this.conversationHistory) || this.conversationHistory.length === 0) {
+            this.conversationHistory = [{ role: 'system', content }];
+            return;
+        }
+
+        if (this.conversationHistory[0].role !== 'system') {
+            this.conversationHistory.unshift({ role: 'system', content });
+            return;
+        }
+
+        this.conversationHistory[0].content = content;
+    }
+
+    saveLearningSettings() {
+        localStorage.setItem('ros2_learning_flow_enabled', String(this.learningFlowEnabled));
+        localStorage.setItem('ros2_learning_lesson', this.learningLesson || '');
+        localStorage.removeItem('ros2_learning_progress');
+        localStorage.setItem('ros2_learning_foundation', this.learningFoundation || '');
+        localStorage.setItem('ros2_custom_system_prompt', this.customSystemPrompt || '');
+        localStorage.setItem('ros2_chat_font_scale', this.chatFontScale);
+        localStorage.setItem('ros2_chat_theme', this.chatTheme);
+        localStorage.setItem('ros2_ai_text_color', this.aiTextColor);
+        localStorage.setItem('ros2_user_text_color', this.userTextColor);
+        localStorage.setItem('ros2_chat_surface_color', this.chatSurfaceColor);
+        localStorage.setItem('ros2_chat_mode', this.chatMode);
+    }
+
+    applyChatAppearance() {
+        this.chatWidget.dataset.fontScale = this.chatFontScale;
+        this.chatWidget.dataset.theme = this.chatTheme;
+        this.chatWidget.style.setProperty('--ai-text-color', this.aiTextColor);
+        this.chatWidget.style.setProperty('--user-text-color', this.userTextColor);
+        this.chatWidget.style.setProperty('--chat-surface-color', this.chatSurfaceColor);
+        this.updateCommandHintUI();
+    }
+
+    updateLearningHint() {
+        if (!this.learningHint) return;
+
+        const dismissedOnce = sessionStorage.getItem('ros2_learning_hint_dismissed') === 'true';
+        const shouldShow = this.learningFlowEnabled && !this.hasLearningProfile() && !dismissedOnce;
+
+        this.learningHint.classList.toggle('show', shouldShow);
+    }
+
+    showLearningProgressSelector() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message system-message learning-system-message';
+
+        wrapper.innerHTML = `
+            <div class="message-content learning-card">
+                <p><strong>学习引导 · 阶段1</strong></p>
+                <p>你现在学到 ROS2 第几节？（1-26）</p>
+                <div class="learning-lesson-row">
+                    <input type="number" min="1" max="26" class="learning-lesson-input" id="learning-lesson-input" value="${this.learningLesson || ''}" placeholder="例如 8">
+                    <button class="learning-level-btn" id="learning-lesson-confirm">确认</button>
+                </div>
+                <div class="learning-level-grid">
+                    <button class="learning-level-btn" data-lesson="1">第1节</button>
+                    <button class="learning-level-btn" data-lesson="6">第6节</button>
+                    <button class="learning-level-btn" data-lesson="12">第12节</button>
+                    <button class="learning-level-btn" data-lesson="18">第18节</button>
+                    <button class="learning-level-btn" data-lesson="26">第26节</button>
+                </div>
+            </div>
+        `;
+
+        this.chatMessages.appendChild(wrapper);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    startLearningFlow() {
+        if (!this.learningFlowEnabled || this.hasLearningProfile()) return;
+
+        const hasSelector = this.chatMessages.querySelector('.learning-system-message');
+        if (!hasSelector) {
+            this.showLearningProgressSelector();
+        }
+    }
+
+    startRelearning() {
+        this.learningLesson = '';
+        this.learningFoundation = '';
+        this.waitingForLearningFoundation = false;
+        this.learningGuideNoticeShown = false;
+        this.conversationHistory = [];
+        this.chatMessages.innerHTML = `
+            <div class="message ai-message">
+                <div class="message-content">
+                    <p>你好！我可以帮你解答ROS2相关的问题，支持文字和图片输入。</p>
+                    <p><small>💡 提示：在标题栏右键点击可配置API</small></p>
+                </div>
+            </div>
+        `;
+        this.saveLearningSettings();
+        this.saveConversationHistory();
+        this.uploadedImages = [];
+        document.querySelectorAll('.image-preview').forEach(el => el.remove());
+        this.startLearningFlow();
+    }
+
+    setLearningLesson(lessonValue) {
+        const lesson = Number(lessonValue);
+        if (!Number.isInteger(lesson) || lesson < 1 || lesson > 26) {
+            this.addSystemMessage('⚠️ 请输入 1 到 26 之间的章节数字。');
+            return;
+        }
+
+        this.learningLesson = String(lesson);
+        this.waitingForLearningFoundation = true;
+        this.saveLearningSettings();
+
+        this.addSystemMessage(`✅ 已记录学习进度：ROS2 第${this.learningLesson}节`);
+        this.addSystemMessage('学习引导 · 阶段2：请描述你在该阶段已有的基础。\n例如：你做过哪些ROS2项目、熟悉哪些命令、最想补哪块。');
+    }
+
+    completeLearningFoundation(inputText) {
+        this.learningFoundation = inputText;
+        this.waitingForLearningFoundation = false;
+
+        this.ensureSystemPromptInHistory();
+        this.saveLearningSettings();
+        this.saveConversationHistory();
+        this.updateLearningHint();
+
+        this.addSystemMessage('✅ 学习引导已完成，本次会话将按你的基础定制讲解。');
     }
     
     checkApiKey() {
@@ -93,18 +340,19 @@ class AIChat {
         const saved = localStorage.getItem('ros2_chat_history');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
             } catch (e) {
-                return [];
+                console.warn('解析对话历史失败，使用默认system prompt。', e);
             }
         }
-        return [{
-            role: 'system',
-            content: '你是一个专业的ROS2助手，精通ROS2 Humble的各个方面，包括安装、配置、节点、话题、服务、参数、launch文件等。请用清晰、准确的中文回答用户的问题。'
-        }];
+        return [{ role: 'system', content: this.getComposedSystemPrompt() }];
     }
     
     saveConversationHistory() {
+        this.ensureSystemPromptInHistory();
         localStorage.setItem('ros2_chat_history', JSON.stringify(this.conversationHistory));
     }
     
@@ -148,12 +396,30 @@ class AIChat {
         
         // 发送消息
         this.sendBtn.addEventListener('click', () => this.sendMessage());
-        this.chatInput.addEventListener('keypress', (e) => {
+        this.chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 this.sendMessage();
             }
         });
+
+        const commandShell = document.getElementById('chat-command-hints');
+        if (commandShell) {
+            commandShell.addEventListener('click', (e) => {
+                const chip = e.target.closest('.command-chip');
+                if (!chip) return;
+
+                const cmd = chip.dataset.cmd;
+                if (!cmd) return;
+
+                if (cmd === '/normal') {
+                    this.setChatMode('general');
+                } else {
+                    this.chatInput.value = `${cmd} `;
+                    this.chatInput.focus();
+                }
+            });
+        }
         
         // 图片上传
         if (this.imageUploadBtn && this.imageInput) {
@@ -170,6 +436,53 @@ class AIChat {
         if (this.clearHistoryBtn) {
             this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
         }
+
+        // 重新学习按钮
+        if (this.relearnBtn) {
+            this.relearnBtn.addEventListener('click', () => this.startRelearning());
+        }
+
+        if (this.settingsBtn) {
+            this.settingsBtn.addEventListener('click', () => this.showSettings());
+        }
+
+        if (this.learningHint) {
+            const closeBtn = document.getElementById('learning-hint-close');
+            const openSettingsBtn = document.getElementById('learning-hint-open-settings');
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    sessionStorage.setItem('ros2_learning_hint_dismissed', 'true');
+                    this.updateLearningHint();
+                });
+            }
+
+            if (openSettingsBtn) {
+                openSettingsBtn.addEventListener('click', () => this.showSettings());
+            }
+        }
+
+        this.chatMessages.addEventListener('click', (e) => {
+            const confirmBtn = e.target.closest('#learning-lesson-confirm');
+            if (confirmBtn) {
+                const lessonInput = this.chatMessages.querySelector('#learning-lesson-input');
+                const lessonValue = lessonInput ? lessonInput.value : '';
+                this.setLearningLesson(lessonValue);
+                if (this.waitingForLearningFoundation) {
+                    confirmBtn.closest('.learning-system-message')?.remove();
+                }
+                return;
+            }
+
+            const lessonBtn = e.target.closest('.learning-level-btn[data-lesson]');
+            if (!lessonBtn) return;
+
+            const selectedLesson = lessonBtn.dataset.lesson;
+            if (!selectedLesson) return;
+
+            lessonBtn.closest('.learning-system-message')?.remove();
+            this.setLearningLesson(selectedLesson);
+        });
         
         // 右键点击标题栏显示管理员设置
         this.chatHeader.addEventListener('contextmenu', (e) => {
@@ -213,8 +526,9 @@ class AIChat {
             this.dragOffset.x = e.clientX - this.chatWidget.offsetLeft;
             this.dragOffset.y = e.clientY - this.chatWidget.offsetTop;
             
-            document.addEventListener('mousemove', this.handleDrag.bind(this));
-            document.addEventListener('mouseup', this.handleDragEnd.bind(this));
+            document.addEventListener('mousemove', this.boundHandleDrag);
+            document.addEventListener('mouseup', this.boundHandleDragEnd);
+            this.toggleIframePointerEvents(false);
             
             this.chatWidget.style.transition = 'none';
             e.preventDefault();
@@ -244,8 +558,9 @@ class AIChat {
             this.isDragging = false;
             this.chatWidget.style.transition = 'all 0.3s ease';
             
-            document.removeEventListener('mousemove', this.handleDrag.bind(this));
-            document.removeEventListener('mouseup', this.handleDragEnd.bind(this));
+            document.removeEventListener('mousemove', this.boundHandleDrag);
+            document.removeEventListener('mouseup', this.boundHandleDragEnd);
+            this.toggleIframePointerEvents(true);
         }
     }
     
@@ -270,8 +585,9 @@ class AIChat {
                     left: rect.left
                 };
                 
-                document.addEventListener('mousemove', this.handleResize.bind(this));
-                document.addEventListener('mouseup', this.handleResizeEnd.bind(this));
+                document.addEventListener('mousemove', this.boundHandleResize);
+                document.addEventListener('mouseup', this.boundHandleResizeEnd);
+                this.toggleIframePointerEvents(false);
                 
                 this.chatWidget.style.transition = 'none';
                 e.preventDefault();
@@ -285,9 +601,10 @@ class AIChat {
         const deltaX = e.clientX - this.startPos.x;
         const deltaY = e.clientY - this.startPos.y;
         
-        const minWidth = 320;
+        const minWidth = 420;
         const minHeight = 400;
-        const maxWidth = 800;
+        const baseMaxWidth = 1100;
+        const maxWidth = Math.min(window.innerWidth - 20, Math.floor(baseMaxWidth * this.widthLimitScale));
         const maxHeight = window.innerHeight * 0.9;
         
         // 只处理右下角拉伸
@@ -303,14 +620,29 @@ class AIChat {
             this.isResizing = false;
             this.resizeHandle = null;
             
-            document.removeEventListener('mousemove', this.handleResize.bind(this));
-            document.removeEventListener('mouseup', this.handleResizeEnd.bind(this));
+            document.removeEventListener('mousemove', this.boundHandleResize);
+            document.removeEventListener('mouseup', this.boundHandleResizeEnd);
+            this.toggleIframePointerEvents(true);
         }
+    }
+
+    toggleIframePointerEvents(enabled) {
+        document.querySelectorAll('iframe').forEach((frame) => {
+            frame.style.pointerEvents = enabled ? '' : 'none';
+        });
     }
     
     showChat() {
         this.chatWidget.classList.add('show');
         this.chatTrigger.classList.add('hidden');
+
+        if (this.learningFlowEnabled && !this.hasLearningProfile()) {
+            this.startLearningFlow();
+        } else if (this.learningFlowEnabled && this.hasLearningProfile() && !this.learningGuideNoticeShown) {
+            this.addSystemMessage(`📌 当前学习进度：第${this.learningLesson}节。若需重新引导，输入 /relearn`);
+            this.learningGuideNoticeShown = true;
+        }
+
         this.chatInput.focus();
     }
     
@@ -366,8 +698,65 @@ class AIChat {
     }
     
     async sendMessage() {
-        const message = this.chatInput.value.trim();
+        let message = this.chatInput.value.trim();
         if (!message && this.uploadedImages.length === 0) return;
+
+        const modeCommandMatch = message.match(/^\/(code|plan|teacher|normal)\s*(.*)$/s);
+        if (modeCommandMatch) {
+            const cmd = modeCommandMatch[1];
+            const remainText = (modeCommandMatch[2] || '').trim();
+            const modeMap = {
+                code: 'code',
+                plan: 'plan',
+                teacher: 'teacher',
+                normal: 'general'
+            };
+
+            this.setChatMode(modeMap[cmd]);
+
+            if (!remainText) {
+                this.chatInput.value = '';
+                return;
+            }
+
+            message = remainText;
+            this.chatInput.value = remainText;
+        }
+
+        if (message === '/relearn') {
+            this.learningLesson = '';
+            this.learningFoundation = '';
+            this.waitingForLearningFoundation = false;
+            this.learningGuideNoticeShown = false;
+            this.ensureSystemPromptInHistory();
+            this.saveLearningSettings();
+            this.saveConversationHistory();
+            this.chatInput.value = '';
+            this.startLearningFlow();
+            return;
+        }
+
+        if (message.startsWith('/sys ')) {
+            const promptText = message.slice(5).trim();
+            if (!promptText) {
+                this.addSystemMessage('⚠️ 用法：/sys 你的系统指令');
+            } else {
+                this.customSystemPrompt = promptText;
+                this.ensureSystemPromptInHistory();
+                this.saveLearningSettings();
+                this.saveConversationHistory();
+                this.addSystemMessage('✅ 自定义系统指令已更新（学习背景部分保持不变）。');
+            }
+            this.chatInput.value = '';
+            return;
+        }
+
+        if (this.waitingForLearningFoundation) {
+            this.chatInput.value = '';
+            this.displayMessage(message, 'user');
+            this.completeLearningFoundation(message);
+            return;
+        }
         
         // 构建用户消息
         const userMessage = {
@@ -401,41 +790,50 @@ class AIChat {
         
         // 禁用发送按钮
         this.sendBtn.disabled = true;
-        this.sendBtn.textContent = '发送中...';
-        
-        // 显示思考指示器
-        this.showTypingIndicator();
+        this.sendBtn.textContent = '⟳';
         
         try {
             let response;
             
             // 如果没有配置API，使用硬编码对话
             if (!this.apiKey) {
+                // 显示思考指示器
+                this.showTypingIndicator();
                 await new Promise(resolve => setTimeout(resolve, 800)); // 模拟延迟
                 response = this.getHardcodedResponse(message);
+                this.hideTypingIndicator();
+                
+                // 添加AI响应到历史
+                this.conversationHistory.push({
+                    role: 'assistant',
+                    content: response
+                });
+                this.saveConversationHistory();
+                
+                // 显示AI响应
+                this.displayMessage(response, 'ai');
             } else {
-                // 调用真实API
-                response = await this.callOpenAI();
+                // 调用流式API
+                const streamingMsg = this.displayStreamingMessage();
+                
+                response = await this.callOpenAIStream((chunk) => {
+                    streamingMsg.appendChunk(chunk);
+                });
+                
+                // 添加AI响应到历史
+                this.conversationHistory.push({
+                    role: 'assistant',
+                    content: response
+                });
+                this.saveConversationHistory();
             }
-            
-            this.hideTypingIndicator();
-            
-            // 添加AI响应到历史
-            this.conversationHistory.push({
-                role: 'assistant',
-                content: response
-            });
-            this.saveConversationHistory();
-            
-            // 显示AI响应
-            this.displayMessage(response, 'ai');
             
         } catch (error) {
             this.hideTypingIndicator();
             this.addSystemMessage(`❌ 错误: ${error.message}`);
         } finally {
             this.sendBtn.disabled = false;
-            this.sendBtn.textContent = '发送';
+            this.sendBtn.textContent = '↑';
         }
     }
     
@@ -586,6 +984,109 @@ ros2 launch <package_name> <launch_file.py>
 • "如何创建launch文件？"
 • "话题通信怎么用？"`;
     }
+
+    async callOpenAIStream(onChunk) {
+        const model = this.modelSelect.value || 'gpt-4o-mini';
+        
+        // 构建请求头
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+        };
+        
+        // 为不同的API提供商添加特定的请求体配置
+        const requestBody = {
+            model: model,
+            messages: this.conversationHistory,
+            temperature: 0.7,
+            max_tokens: 2000,
+            stream: true  // 启用流式响应
+        };
+        
+        const response = await fetch(this.apiEndpoint, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error?.message || '请求失败');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullContent = '';
+        
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                
+                // 保留最后一行（可能不完整）
+                buffer = lines[lines.length - 1];
+                
+                // 处理完整的行
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (!line || line === '[DONE]') continue;
+                    if (!line.startsWith('data: ')) continue;
+                    
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        // 从不同的API提供商提取内容
+                        let chunk = '';
+                        
+                        // OpenAI 格式
+                        if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                            chunk = data.choices[0].delta.content;
+                        }
+                        // Qwen/阿里云格式
+                        else if (data.output && data.output.choices && data.output.choices[0] && data.output.choices[0].delta) {
+                            chunk = data.output.choices[0].delta;
+                        }
+                        
+                        if (chunk) {
+                            fullContent += chunk;
+                            onChunk(chunk);
+                        }
+                    } catch (e) {
+                        // 跳过无效的 JSON 行
+                        continue;
+                    }
+                }
+            }
+            
+            // 处理最后的 buffer
+            if (buffer && buffer.startsWith('data: ')) {
+                try {
+                    const data = JSON.parse(buffer.slice(6));
+                    let chunk = '';
+                    if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                        chunk = data.choices[0].delta.content;
+                    } else if (data.output && data.output.choices && data.output.choices[0] && data.output.choices[0].delta) {
+                        chunk = data.output.choices[0].delta;
+                    }
+                    if (chunk) {
+                        fullContent += chunk;
+                        onChunk(chunk);
+                    }
+                } catch (e) {
+                    // 忽略
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+        
+        return fullContent;
+    }
     
     async callOpenAI() {
         const model = this.modelSelect.value || 'gpt-4o-mini';
@@ -628,6 +1129,39 @@ ros2 launch <package_name> <launch_file.py>
         
         const data = await response.json();
         return data.choices[0].message.content;
+    }
+    
+    displayStreamingMessage() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message ai-message';
+        messageDiv.id = 'streaming-message-' + Date.now();
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
+        const textDiv = document.createElement('div');
+        textDiv.className = 'streaming-text';
+        textDiv.innerHTML = '';
+        
+        messageContent.appendChild(textDiv);
+        messageDiv.appendChild(messageContent);
+        this.chatMessages.appendChild(messageDiv);
+        
+        // 自动滚动到底部
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        
+        const aiChat = this;
+        return {
+            messageDiv: messageDiv,
+            textDiv: textDiv,
+            content: '',
+            appendChunk(chunk) {
+                this.content += chunk;
+                // 渲染为HTML（支持markdown）
+                textDiv.innerHTML = aiChat.parseMarkdown(this.content);
+                aiChat.chatMessages.scrollTop = aiChat.chatMessages.scrollHeight;
+            }
+        };
     }
     
     displayMessage(content, sender, images = []) {
@@ -727,6 +1261,42 @@ ros2 launch <package_name> <launch_file.py>
     showSettings() {
         const modal = document.createElement('div');
         modal.className = 'settings-modal';
+
+        const generalSettingsHtml = `
+            <div class="settings-group">
+                <h4>🧭 学习引导与对话样式</h4>
+                <label class="settings-inline">
+                    <input type="checkbox" id="learning-flow-enabled" ${this.learningFlowEnabled ? 'checked' : ''}>
+                    开启学习进度引导（阶段选择 + 学习基础输入）
+                </label>
+
+                <label>默认自定义系统指令（可用 /sys 临时更新）：</label>
+                <textarea id="custom-system-prompt" class="settings-input" rows="3" placeholder="例如：请优先用表格总结，再给最短可运行示例。">${this.customSystemPrompt}</textarea>
+
+                <label>聊天字体大小：</label>
+                <select id="chat-font-scale" class="settings-input">
+                    <option value="compact" ${this.chatFontScale === 'compact' ? 'selected' : ''}>紧凑</option>
+                    <option value="normal" ${this.chatFontScale === 'normal' ? 'selected' : ''}>标准</option>
+                    <option value="comfortable" ${this.chatFontScale === 'comfortable' ? 'selected' : ''}>舒适</option>
+                </select>
+
+                <label>聊天背景风格：</label>
+                <select id="chat-theme" class="settings-input">
+                    <option value="control-blue" ${this.chatTheme === 'control-blue' ? 'selected' : ''}>控制蓝</option>
+                    <option value="industrial-light" ${this.chatTheme === 'industrial-light' ? 'selected' : ''}>工业浅色</option>
+                    <option value="terminal-dark" ${this.chatTheme === 'terminal-dark' ? 'selected' : ''}>终端深色</option>
+                </select>
+
+                <label>AI回复字体颜色：</label>
+                <input type="color" id="ai-text-color" class="settings-input" value="${this.aiTextColor}">
+
+                <label>用户消息字体颜色：</label>
+                <input type="color" id="user-text-color" class="settings-input" value="${this.userTextColor}">
+
+                <label>对话区背景色：</label>
+                <input type="color" id="chat-surface-color" class="settings-input" value="${this.chatSurfaceColor}">
+            </div>
+        `;
         
         if (this.isAdminMode) {
             // 管理员模式：完整配置
@@ -739,6 +1309,8 @@ ros2 launch <package_name> <launch_file.py>
                 <div class="settings-content">
                     <h3>🔧 管理员设置</h3>
                     <div class="settings-form">
+                        ${generalSettingsHtml}
+
                         <label>AI服务提供商：</label>
                         <select id="provider-select" class="settings-input">
                             <option value="qwen" ${this.apiProvider === 'qwen' ? 'selected' : ''}>通义千问 (Qwen)</option>
@@ -788,6 +1360,13 @@ ros2 launch <package_name> <launch_file.py>
             });
             
             document.getElementById('save-btn').addEventListener('click', () => {
+                this.learningFlowEnabled = document.getElementById('learning-flow-enabled').checked;
+                this.customSystemPrompt = document.getElementById('custom-system-prompt').value.trim();
+                this.chatFontScale = document.getElementById('chat-font-scale').value;
+                this.chatTheme = document.getElementById('chat-theme').value;
+                this.aiTextColor = document.getElementById('ai-text-color').value;
+                this.userTextColor = document.getElementById('user-text-color').value;
+                this.chatSurfaceColor = document.getElementById('chat-surface-color').value;
                 this.apiProvider = providerSelect.value;
                 this.apiEndpoint = endpointInput.value;
                 this.apiKey = apikeyInput.value;
@@ -795,6 +1374,11 @@ ros2 launch <package_name> <launch_file.py>
                 localStorage.setItem('ai_provider', this.apiProvider);
                 localStorage.setItem('ai_api_endpoint', this.apiEndpoint);
                 localStorage.setItem('ai_api_key', this.apiKey);
+
+                this.ensureSystemPromptInHistory();
+                this.saveLearningSettings();
+                this.applyChatAppearance();
+                this.updateLearningHint();
                 
                 this.updateModelOptions();
                 this.addSystemMessage('✅ 管理员设置已保存！');
@@ -806,6 +1390,8 @@ ros2 launch <package_name> <launch_file.py>
                 <div class="settings-content">
                     <h3>⚙️ 选择AI服务</h3>
                     <div class="settings-form">
+                        ${generalSettingsHtml}
+
                         <label>AI服务提供商：</label>
                         <select id="provider-select" class="settings-input">
                             <option value="qwen" ${this.apiProvider === 'qwen' ? 'selected' : ''}>通义千问 (Qwen)</option>
@@ -852,8 +1438,21 @@ ros2 launch <package_name> <launch_file.py>
             });
             
             document.getElementById('save-btn').addEventListener('click', () => {
+                this.learningFlowEnabled = document.getElementById('learning-flow-enabled').checked;
+                this.customSystemPrompt = document.getElementById('custom-system-prompt').value.trim();
+                this.chatFontScale = document.getElementById('chat-font-scale').value;
+                this.chatTheme = document.getElementById('chat-theme').value;
+                this.aiTextColor = document.getElementById('ai-text-color').value;
+                this.userTextColor = document.getElementById('user-text-color').value;
+                this.chatSurfaceColor = document.getElementById('chat-surface-color').value;
                 this.apiProvider = providerSelect.value;
                 localStorage.setItem('ai_provider', this.apiProvider);
+
+                this.ensureSystemPromptInHistory();
+                this.saveLearningSettings();
+                this.applyChatAppearance();
+                this.updateLearningHint();
+
                 this.updateModelOptions();
                 this.addSystemMessage('✅ 服务选择已保存！');
                 modal.remove();
@@ -885,13 +1484,11 @@ ros2 launch <package_name> <launch_file.py>
     
     clearHistory() {
         if (confirm('确定要清除所有对话历史吗？')) {
-            this.conversationHistory = [{
-                role: 'system',
-                content: '你是一个专业的ROS2助手，精通ROS2 Humble的各个方面。'
-            }];
+            this.conversationHistory = [{ role: 'system', content: this.getComposedSystemPrompt() }];
             this.saveConversationHistory();
             this.chatMessages.innerHTML = '';
             this.addSystemMessage('✅ 对话历史已清除');
+            this.startLearningFlow();
         }
     }
     
