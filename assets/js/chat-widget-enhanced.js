@@ -1,4 +1,33 @@
 // AI聊天窗口功能 - 支持OpenAI API、图片上传和对话历史
+const ROS2_LESSON_CATALOG = [
+    { id: 1, title: 'ROS2 概况与特色' },
+    { id: 2, title: 'ROS2 安装及设置' },
+    { id: 3, title: '基本命令行工具' },
+    { id: 4, title: '制作 ROS2 程序包' },
+    { id: 5, title: 'ROS2 话题' },
+    { id: 6, title: 'ROS2 服务' },
+    { id: 7, title: '自定义接口' },
+    { id: 8, title: 'ROS2 参数' },
+    { id: 9, title: 'ROS2 启动文件' },
+    { id: 10, title: 'ROS2 常用工具' },
+    { id: 11, title: 'ROS2 依赖关系管理' },
+    { id: 12, title: 'ROS2 动作' },
+    { id: 13, title: 'ROS2 组件' },
+    { id: 14, title: 'ROS2 动态参数' },
+    { id: 15, title: 'TF2 坐标系' },
+    { id: 16, title: 'RViz2 三维可视化' },
+    { id: 17, title: 'URDF 机器人建模' },
+    { id: 18, title: 'Gazebo 仿真' },
+    { id: 19, title: 'Webots 仿真' },
+    { id: 20, title: 'Topic Statistics' },
+    { id: 21, title: '中间件（DDS / RMW）' },
+    { id: 22, title: 'ROS2 安全' },
+    { id: 23, title: '服务质量（QoS）' },
+    { id: 24, title: 'Memory allocator' },
+    { id: 25, title: '通信与日志' },
+    { id: 26, title: 'Recording a bag from a node' }
+];
+
 class AIChat {
     constructor() {
         this.chatWidget = document.getElementById('ai-chat-widget');
@@ -82,8 +111,40 @@ class AIChat {
         return Boolean(this.learningLesson && this.learningFoundation);
     }
 
+    getLearningLessonNumber() {
+        const lesson = Number(this.learningLesson);
+        if (!Number.isInteger(lesson) || lesson < 1 || lesson > 26) {
+            return null;
+        }
+        return lesson;
+    }
+
+    getHardLearningSystemPrompt() {
+        const lesson = this.getLearningLessonNumber();
+        if (!lesson) {
+            return '';
+        }
+
+        const currentLesson = ROS2_LESSON_CATALOG.find((item) => item.id === lesson);
+        const lessonTag = currentLesson ? `L${currentLesson.id}:${currentLesson.title}` : `L${lesson}:未命名章节`;
+
+        return [
+            '硬性学习上下文（Hard-SysPrompt，不可忽略）：',
+            `- 当前学习章节（唯一主上下文）：${lessonTag}`,
+            '- 回答约束：优先围绕“当前章节”内容回答，不默认依赖前序章节知识。',
+            '- 若问题涉及其他章节：先标注“非本章节重点”，再给最小必要补充，并把重点拉回当前章节。',
+            '- 讲解粒度：按当前章节目标组织回答，给本章节可直接执行的命令/步骤/练习。'
+        ].join('\n');
+    }
+
     getComposedSystemPrompt() {
         const sections = [this.baseSystemPrompt];
+
+        // Hard-SysPrompt：由学习章节自动压缩生成，优先级高于软模式提示。
+        const hardLearningPrompt = this.getHardLearningSystemPrompt();
+        if (hardLearningPrompt) {
+            sections.push(hardLearningPrompt);
+        }
 
         if (this.hasLearningProfile()) {
             sections.push(
@@ -323,6 +384,8 @@ class AIChat {
         this.learningLesson = String(lesson);
         this.waitingForLearningFoundation = true;
         this.saveLearningSettings();
+        this.ensureSystemPromptInHistory();
+        this.saveConversationHistory();
 
         this.addSystemMessage(`✅ 已记录学习进度：ROS2 第${this.learningLesson}节`);
         this.addSystemMessage('学习引导 · 阶段2：请描述你在该阶段已有的基础。\n例如：你做过哪些ROS2项目、熟悉哪些命令、最想补哪块。');
