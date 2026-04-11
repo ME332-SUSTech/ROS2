@@ -1,6 +1,11 @@
 # API密钥配置文件（包含真实密钥）
 config.yaml
 
+# 测试和诊断脚本（不上传仓库）
+tests/
+test_*.py
+*_test.py
+
 # Python
 __pycache__/
 *.py[cod]
