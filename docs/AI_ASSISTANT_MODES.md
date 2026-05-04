@@ -9,6 +9,8 @@
 | `/code` | 代码分析 | 优先定位问题根因、给出最小修复方案 | 按钮触发 |
 | `/plan` | 计划模式 | 拆解目标、输出里程碑、依赖和风险  | 按钮触发 |
 | `/teacher` | 教学模式 | 以易老师口吻循序渐进讲解 | 按钮触发 |
+| `/think` | 思维过程评价 | 判断对话内容更偏复制粘贴，还是主动筛选和追问 | 按钮触发 |
+| `/quality` | 代码质量评价 | 评价代码质量、给出评分和改进建议 | 按钮触发 |
 | `/normal` | 通用模式 | 按用户问题给出清晰准确回答 | 按钮触发 |
 | `/sys <指令>` | 自定义系统指令 | 为当前会话执行自定义系统提示 | 文本输入 |
 | `/relearn` | 重新学习 | 重置学习背景，重新开始学习流程 | 文本输入 |
@@ -99,7 +101,71 @@
 
 ---
 
-### 4. 通用模式 (`/normal`)
+### 4. 思维过程评价模式 (`/think`)
+
+**功能描述**: 评估学生是否只是复制粘贴 AI 对话内容，还是对 AI 内容进行了筛选、追问和反复澄清
+
+**系统提示词**:
+```
+思维过程评价模式：判断学生是在复制粘贴 AI 内容，还是会对 AI 给出的内容进行自我筛选、比较、追问和反复澄清。
+```
+
+**代码位置**: [assets/js/chat-widget-enhanced.js](assets/js/chat-widget-enhanced.js)
+- 函数: `getModeInstruction()`
+- 模式值: `think`
+- 占位符文本: "思维过程评价：粘贴对话内容，我会判断是复制粘贴还是主动筛选追问"
+
+**使用场景**:
+- 课程作业中的学习过程评价
+- 检查学生是否真正消化 AI 建议
+- 对比不同提问方式的主动性差异
+
+**自动评价**:
+- 当连续对话达到一定轮数时，会自动插入阶段性评价和指导
+- 也可以点击任意 AI 回复下方的 `评价` 按钮手动触发
+
+**例子**:
+```
+用户: /think
+[粘贴学生和 AI 的多轮对话]
+助手: [判断是复制粘贴、部分筛选，还是主动追问，并给出建议]
+```
+
+---
+
+### 5. 代码质量评价模式 (`/quality`)
+
+**功能描述**: 评价用户提交的代码质量，并给出评分、优点、问题和建议
+
+**系统提示词**:
+```
+代码质量评价模式：评价代码的可读性、结构、健壮性、可维护性和测试友好度，并给出改进建议。
+```
+
+**代码位置**: [assets/js/chat-widget-enhanced.js](assets/js/chat-widget-enhanced.js)
+- 函数: `getModeInstruction()`
+- 模式值: `quality`
+- 占位符文本: "代码质量评价：粘贴代码，我会给评分、问题和建议"
+
+**使用场景**:
+- 代码作业互评
+- 自查代码质量
+- 为重构和测试提供建议
+
+**自动评价**:
+- 当连续对话达到一定轮数时，会自动插入阶段性评价和指导
+- 也可以点击任意 AI 回复下方的 `评价` 按钮手动触发
+
+**例子**:
+```
+用户: /quality
+[粘贴代码]
+助手: [总体评分 + 优点 + 主要问题 + 改进建议]
+```
+
+---
+
+### 6. 通用模式 (`/normal`)
 
 **功能描述**: 标准问答模式
 
@@ -126,7 +192,7 @@
 
 ---
 
-### 5. 自定义系统指令 (`/sys`)
+### 7. 自定义系统指令 (`/sys`)
 
 **功能描述**: 为当前会话设置自定义系统提示
 
@@ -146,7 +212,7 @@
 
 ---
 
-### 6. 重新学习 (`/relearn`)
+### 8. 重新学习 (`/relearn`)
 
 **功能描述**: 重置学习背景和学习历程
 
@@ -199,13 +265,15 @@ baseSystemPrompt = '你是一个专业的ROS2助手，精通ROS2 Humble的各个
 
 ```javascript
 // 正则表达式匹配
-const modeCommandMatch = message.match(/^\/(code|plan|teacher|normal)\s*(.*)$/s);
+const modeCommandMatch = message.match(/^\/(code|plan|teacher|think|quality|normal)\s*(.*)$/s);
 
 // 模式映射
 {
   code: 'code',
   plan: 'plan',
   teacher: 'teacher',
+  think: 'think',
+  quality: 'quality',
   normal: 'general'
 }
 ```
@@ -222,10 +290,12 @@ const modeCommandMatch = message.match(/^\/(code|plan|teacher|normal)\s*(.*)$/s)
 
 ```javascript
 {
-  general: '输入问题... 试试 /code /plan /teacher',
+  general: '输入问题... 试试 /code /plan /teacher /think /quality',
   code: '代码分析模式：描述报错、贴代码片段或输入 /normal 退出',
   plan: '计划模式：输入你的目标、周期、资源约束',
-  teacher: '教学模式：输入你想学的知识点，我会分层讲解'
+  teacher: '教学模式：输入你想学的知识点，我会分层讲解',
+  think: '思维过程评价：粘贴对话内容，我会判断是复制粘贴还是主动筛选追问',
+  quality: '代码质量评价：粘贴代码，我会给评分、问题和建议'
 }
 ```
 
@@ -252,6 +322,8 @@ localStorage.setItem('ros2_chat_mode', this.chatMode);
 - `code` - 代码分析
 - `plan` - 计划模式
 - `teacher` - 教学模式
+- `think` - 思维过程评价
+- `quality` - 代码质量评价
 
 **代码位置**: [assets/js/chat-widget-enhanced.js](assets/js/chat-widget-enhanced.js#L133-L138)
 

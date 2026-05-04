@@ -167,7 +167,7 @@
             <div class="chat-messages" id="chat-messages">
                 <div class="message ai-message">
                     <div class="message-content">
-                        <p>你好！我可以帮你解答ROS2相关的问题，支持文字和图片输入。</p>
+                        <p>你好！我可以帮你解答ROS2相关的问题，也可以评价对话思维过程和代码质量，支持文字和图片输入。</p>
                         <p><small>💡 提示：在标题栏右键点击可配置API</small></p>
                     </div>
                 </div>
@@ -177,7 +177,7 @@
                 <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
                 <div class="chat-input-shell">
                     <button id="image-upload-btn" class="image-upload-btn" title="上传图片">📎</button>
-                    <input type="text" id="chat-input" placeholder="输入问题... 试试 /code /plan /teacher" class="chat-input">
+                    <textarea id="chat-input" placeholder="输入问题... 试试 /code /plan /teacher /think /quality" class="chat-input chat-input-textarea" rows="2"></textarea>
                     <button id="send-btn" class="send-btn" title="发送">↑</button>
                 </div>
                 <div id="chat-command-hints" class="chat-command-hints">
@@ -185,6 +185,8 @@
                     <button class="command-chip" data-cmd="/code">/code</button>
                     <button class="command-chip" data-cmd="/plan">/plan</button>
                     <button class="command-chip" data-cmd="/teacher">/teacher</button>
+                    <button class="command-chip" data-cmd="/think">/think</button>
+                    <button class="command-chip" data-cmd="/quality">/quality</button>
                     <button class="command-chip" data-cmd="/normal">/normal</button>
                 </div>
             </div>

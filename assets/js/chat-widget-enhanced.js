@@ -30,6 +30,7 @@ const ROS2_LESSON_CATALOG = [
 
 class AIChat {
     constructor() {
+        this.redirectLocalHostAlias();
         this.chatWidget = document.getElementById('ai-chat-widget');
         this.chatTrigger = document.getElementById('chat-trigger');
         this.chatMessages = document.getElementById('chat-messages');
@@ -92,8 +93,13 @@ class AIChat {
         this.chatSurfaceColor = localStorage.getItem('ros2_chat_surface_color') || '#eef4f9';
         this.learningGuideNoticeShown = false;
         this.chatMode = localStorage.getItem('ros2_chat_mode') || 'general';
+        this.evaluationTurnInterval = Number(localStorage.getItem('ros2_evaluation_turn_interval') || 4);
+        this.lastAutoEvaluationUserCount = Number(localStorage.getItem('ros2_last_auto_evaluation_user_count') || 0);
+        this.lastEvaluationNudgeUserCount = Number(localStorage.getItem('ros2_last_eval_nudge_user_count') || 0);
+        this.isRunningGuidedEvaluation = false;
 
         this.conversationHistory = this.loadConversationHistory();
+        this.syncEvaluationStateFromHistory();
         this.uploadedImages = [];
         
         this.initEventListeners();
@@ -105,6 +111,16 @@ class AIChat {
         this.applyChatAppearance();
         this.updateLearningHint();
         this.checkApiKey();
+    }
+
+    redirectLocalHostAlias() {
+        if (window.location.hostname !== '0.0.0.0') {
+            return;
+        }
+
+        const port = window.location.port ? `:${window.location.port}` : '';
+        const target = `${window.location.protocol}//127.0.0.1${port}${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.replace(target);
     }
 
     hasLearningProfile() {
@@ -213,23 +229,43 @@ class AIChat {
 5) 对命令和代码逐行解释关键点，并说明为什么这么写。
 输出偏好：
 - 语言友好但不失严谨。
-- 每次回答结尾给1个可执行小练习和1条进阶建议。`
+- 每次回答结尾给1个可执行小练习和1条进阶建议。`,
+            think: `思维过程评价模式：
+角色：你是学习过程评估助手，专门评价学生和 AI 的对话记录。
+目标：判断学生是在复制粘贴 AI 内容，还是会对 AI 给出的内容进行自我筛选、比较、追问和反复澄清。
+评价标准：
+1) 关注是否有自己的理解、取舍、验证和复述，而不是整段照搬。
+2) 关注问题是否连续、具体、针对性强，是否围绕同一个难点反复推进。
+3) 识别“只要答案”“直接给结论”这类低主动性表达，以及“我试过/我认为/我想确认”这类主动表达。
+4) 输出要明确区分：复制粘贴倾向高、部分筛选、主动学习明显。
+输出偏好：评分 + 结论 + 证据 + 改进建议 + 下一轮更有效的提问示例。`,
+            quality: `代码质量评价模式：
+角色：你是代码评审助手，专门评价学生提交的代码质量。
+目标：评价代码的可读性、结构、健壮性、可维护性和测试友好度，并给出改进建议。
+评价标准：
+1) 检查命名、结构、重复逻辑、函数边界和注释是否合理。
+2) 检查输入校验、错误处理、调试残留、硬编码、魔法数字和潜在边界问题。
+3) 如果代码片段信息不足，要明确说明限制，不要臆造运行环境。
+4) 输出要给出总体评分、优点、主要问题和可执行建议。
+输出偏好：评分 + 总评 + 优点 + 问题列表 + 修改建议 + 可选重构方向。`
         };
         return modeMap[this.chatMode] || modeMap.general;
     }
 
     getModePlaceholder() {
         const textMap = {
-            general: '输入问题... 试试 /code /plan /teacher',
+            general: '输入问题... 试试 /code /plan /teacher /think /quality',
             code: '代码分析模式：描述报错、贴代码片段或输入 /normal 退出',
             plan: '计划模式：输入你的目标、周期、资源约束',
-            teacher: '教学模式：输入你想学的知识点，我会分层讲解'
+            teacher: '教学模式：输入你想学的知识点，我会分层讲解',
+            think: '思维过程评价：粘贴对话内容，我会判断是复制粘贴还是主动筛选追问',
+            quality: '代码质量评价：粘贴代码，我会给评分、问题和建议'
         };
         return textMap[this.chatMode] || textMap.general;
     }
 
     setChatMode(mode, withNotice = true) {
-        const allowed = ['general', 'code', 'plan', 'teacher'];
+        const allowed = ['general', 'code', 'plan', 'teacher', 'think', 'quality'];
         if (!allowed.includes(mode)) {
             return false;
         }
@@ -245,7 +281,9 @@ class AIChat {
                 general: '通用模式',
                 code: '代码分析模式',
                 plan: '计划模式',
-                teacher: '教学模式（易老师口吻）'
+                teacher: '教学模式（易老师口吻）',
+                think: '思维过程评价模式',
+                quality: '代码质量评价模式'
             };
             this.addSystemMessage(`✅ 已切换到${labelMap[mode]}。`);
         }
@@ -264,7 +302,9 @@ class AIChat {
                 general: '当前模式：通用',
                 code: '当前模式：代码分析',
                 plan: '当前模式：计划',
-                teacher: '当前模式：教学'
+                teacher: '当前模式：教学',
+                think: '当前模式：思维过程评价',
+                quality: '当前模式：代码质量评价'
             };
             modeLabel.textContent = labelMap[this.chatMode] || labelMap.general;
         }
@@ -359,6 +399,10 @@ class AIChat {
         this.waitingForLearningFoundation = false;
         this.learningGuideNoticeShown = false;
         this.conversationHistory = [];
+        this.lastAutoEvaluationUserCount = 0;
+        localStorage.setItem('ros2_last_auto_evaluation_user_count', '0');
+        this.lastEvaluationNudgeUserCount = 0;
+        localStorage.setItem('ros2_last_eval_nudge_user_count', '0');
         this.chatMessages.innerHTML = `
             <div class="message ai-message">
                 <div class="message-content">
@@ -470,7 +514,9 @@ class AIChat {
                 if (msg.role === 'user') {
                     this.displayMessage(msg.content, 'user', msg.images);
                 } else if (msg.role === 'assistant') {
-                    this.displayMessage(msg.content, 'ai');
+                    this.displayMessage(msg.content, 'ai', [], {
+                        variant: msg.meta?.kind === 'evaluation' ? 'evaluation' : 'assistant'
+                    });
                 }
             }
         });
@@ -567,6 +613,14 @@ class AIChat {
         }
 
         this.chatMessages.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('.message-action-btn');
+            if (actionBtn) {
+                const action = actionBtn.dataset.action;
+                const messageDiv = actionBtn.closest('.message.ai-message');
+                this.handleAIMessageAction(action, messageDiv);
+                return;
+            }
+
             const confirmBtn = e.target.closest('#learning-lesson-confirm');
             if (confirmBtn) {
                 const lessonInput = this.chatMessages.querySelector('#learning-lesson-input');
@@ -805,7 +859,7 @@ class AIChat {
         let message = this.chatInput.value.trim();
         if (!message && this.uploadedImages.length === 0) return;
 
-        const modeCommandMatch = message.match(/^\/(code|plan|teacher|normal)\s*(.*)$/s);
+        const modeCommandMatch = message.match(/^\/(code|plan|teacher|think|quality|normal)\s*(.*)$/s);
         if (modeCommandMatch) {
             const cmd = modeCommandMatch[1];
             const remainText = (modeCommandMatch[2] || '').trim();
@@ -813,6 +867,8 @@ class AIChat {
                 code: 'code',
                 plan: 'plan',
                 teacher: 'teacher',
+                think: 'think',
+                quality: 'quality',
                 normal: 'general'
             };
 
@@ -930,7 +986,11 @@ class AIChat {
                     content: response
                 });
                 this.saveConversationHistory();
+                streamingMsg.finalize(response);
             }
+
+            this.triggerGuidedEvaluation({ force: false, source: 'auto' });
+            this.maybeNudgeEvaluation();
             
         } catch (error) {
             this.hideTypingIndicator();
@@ -942,6 +1002,14 @@ class AIChat {
     }
     
     getHardcodedResponse(userMessage) {
+        if (this.chatMode === 'think') {
+            return this.getThinkingProcessEvaluation(userMessage);
+        }
+
+        if (this.chatMode === 'quality') {
+            return this.getCodeQualityEvaluation(userMessage);
+        }
+
         const msg = userMessage.toLowerCase();
         
         // ROS2相关问题的硬编码回答
@@ -1089,7 +1157,158 @@ ros2 launch <package_name> <launch_file.py>
 • "话题通信怎么用？"`;
     }
 
-    async callOpenAIStream(onChunk) {
+    getThinkingProcessEvaluation(inputText) {
+        const text = inputText.trim();
+        if (!text) {
+            return '请先粘贴学生和 AI 的对话内容，我会根据文本判断是否偏向复制粘贴，还是存在主动筛选和反复追问。';
+        }
+
+        const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const questionCount = (text.match(/[？?]/g) || []).length;
+        const reflectiveSignals = [
+            '我想确认', '我认为', '我觉得', '我理解', '我试过', '我尝试', '为什么', '怎么', '能否', '有没有', '如果', '但是', '不过', '对比', '区别', '原因'
+        ];
+        const passiveSignals = [
+            '直接给我', '帮我写', '照着做', '复制', '粘贴', '完整答案', '不用解释', '原封不动', '一步到位'
+        ];
+
+        let score = 52;
+        let reflectiveHits = 0;
+        let passiveHits = 0;
+
+        reflectiveSignals.forEach((signal) => {
+            if (text.includes(signal)) reflectiveHits += 1;
+        });
+        passiveSignals.forEach((signal) => {
+            if (text.includes(signal)) passiveHits += 1;
+        });
+
+        score += Math.min(18, reflectiveHits * 6);
+        score -= Math.min(30, passiveHits * 10);
+
+        if (questionCount >= 3) score += 10;
+        else if (questionCount >= 1) score += 5;
+
+        if (lines.length >= 4) score += 5;
+        if (text.length > 1200 && questionCount <= 1) score -= 8;
+        if (text.length < 120) score -= 8;
+
+        score = Math.max(0, Math.min(100, score));
+
+        let verdict = '有一定筛选，但仍偏被动';
+        if (score >= 75) {
+            verdict = '主动筛选和追问较明显';
+        } else if (score < 45) {
+            verdict = '更像复制粘贴，主动学习痕迹较弱';
+        }
+
+        const evidence = [];
+        if (reflectiveHits > 0) {
+            evidence.push(`出现了 ${reflectiveHits} 类主动表达或追问信号`);
+        }
+        if (passiveHits > 0) {
+            evidence.push(`出现了 ${passiveHits} 类偏被动/复制粘贴信号`);
+        }
+        if (questionCount > 0) {
+            evidence.push(`文本中有 ${questionCount} 个问号，说明存在提问或追问动作`);
+        }
+        if (lines.length > 1) {
+            evidence.push(`内容分成了 ${lines.length} 行，通常更适合展示多轮筛选或对话过程`);
+        }
+
+        const suggestions = [
+            '先用一句话写出你自己的理解，再把最不确定的点单独问出来。',
+            '每次只问一个最关键的问题，并说明你为什么卡住。',
+            '在 AI 回答后补一句“我比较的是 A 和 B，差异在于什么”，这样更能体现筛选和追问。'
+        ];
+
+        return [
+            '### 思维过程评价',
+            `- 结论：${verdict}`,
+            `- 评分：${score}/100`,
+            `- 评价依据：${evidence.length ? evidence.map((item) => `  - ${item}`).join('\n') : '  - 文本中缺少明显的主动筛选、复述或反问信号'}`,
+            '- 建议：',
+            ...suggestions.map((item) => `  - ${item}`),
+            '- 下一轮更有效的提问示例：',
+            '  - “我目前理解到这里，请帮我检查是否有漏洞，然后只指出最关键的一个问题。”',
+            '  - “这两个方案我都看过了，但我想确认它们的差异和适用条件分别是什么。”'
+        ].join('\n');
+    }
+
+    getCodeQualityEvaluation(inputText) {
+        const code = inputText.trim();
+        if (!code) {
+            return '请先粘贴代码，我会从可读性、结构、健壮性和可维护性几个维度给出评价。';
+        }
+
+        const lines = code.split(/\r?\n/);
+        const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+        const functionLikeCount = (code.match(/\b(function|def|class)\b|=>|\bpublic\b|\bprivate\b|\bprotected\b/g) || []).length;
+        const commentCount = (code.match(/\/\/|#|\/\*/g) || []).length;
+        const todoCount = (code.match(/\bTODO\b|\bFIXME\b|\bHACK\b/g) || []).length;
+        const debugCount = (code.match(/console\.log\(|print\(|std::cout|logger\.(debug|info|warn|error)\(/g) || []).length;
+        const longLineCount = lines.filter((line) => line.length > 120).length;
+        const hardcodeCount = (code.match(/['"][^'"]*(?:\/tmp|localhost|127\.0\.0\.1|8080|3000|1234)[^'"]*['"]|\b\d{2,}\b/g) || []).length;
+        const hasErrorHandling = /try\s*\{|except\s*\(|catch\s*\(|raise\b|throw\b|assert\b/.test(code);
+        const hasValidation = /if\s*\(|validate|check|guard|require|assert/.test(code);
+
+        let score = 64;
+        if (functionLikeCount > 0) score += 8;
+        if (commentCount > 0) score += 4;
+        if (hasErrorHandling) score += 8;
+        if (hasValidation) score += 6;
+        if (nonEmptyLines.length > 30) score += 2;
+
+        score -= Math.min(20, todoCount * 8);
+        score -= Math.min(18, debugCount * 6);
+        score -= Math.min(14, longLineCount * 3);
+        score -= Math.min(12, hardcodeCount > 4 ? 12 : hardcodeCount * 2);
+
+        score = Math.max(0, Math.min(100, score));
+
+        const rating = score >= 80 ? '优秀' : score >= 65 ? '良好' : score >= 50 ? '一般' : '偏弱';
+
+        const strengths = [];
+        if (functionLikeCount > 0) strengths.push('有一定的函数或类结构，说明不是完全平铺的脚本');
+        if (commentCount > 0) strengths.push('包含注释，阅读成本更低');
+        if (hasErrorHandling) strengths.push('存在错误处理或断言，健壮性意识较好');
+        if (hasValidation) strengths.push('包含输入检查或防御性判断');
+
+        const issues = [];
+        if (todoCount > 0) issues.push(`存在 ${todoCount} 处 TODO/FIXME/HACK，说明功能可能未收尾`);
+        if (debugCount > 0) issues.push(`存在 ${debugCount} 处调试输出，提交前建议清理`);
+        if (longLineCount > 0) issues.push(`有 ${longLineCount} 行过长，影响可读性`);
+        if (hardcodeCount > 0) issues.push(`存在一些硬编码值/魔法数字，建议抽成常量或配置`);
+        if (!hasErrorHandling) issues.push('未看到明显的错误处理，出错时可能不够稳健');
+
+        const suggestions = [];
+        if (todoCount > 0) suggestions.push('补完 TODO/FIXME 对应逻辑，或明确标注为后续工作');
+        if (debugCount > 0) suggestions.push('移除临时打印，改为正式日志或测试断言');
+        if (longLineCount > 0) suggestions.push('拆分过长语句或提取辅助函数，提升可读性');
+        if (hardcodeCount > 0) suggestions.push('把硬编码参数提取到常量、配置或参数文件中');
+        if (!hasErrorHandling) suggestions.push('补充输入校验和异常处理，减少边界条件失败');
+        if (functionLikeCount === 0) suggestions.push('如果代码逻辑较长，考虑拆分成更小的函数或模块');
+
+        const languageHint = /\bimport\s+|\bdef\s+|\bclass\s+|#include/.test(code)
+            ? '从语法特征看，代码更像 Python/C++ 风格片段。'
+            : '当前代码片段的语言特征不够明显，以下评价基于文本本身。';
+
+        return [
+            '### 代码质量评价',
+            `- 总体评分：${score}/100（${rating}）`,
+            `- 语言提示：${languageHint}`,
+            '- 优点：',
+            ...(strengths.length ? strengths.map((item) => `  - ${item}`) : ['  - 片段中没有明显的结构性问题，但也缺少能体现设计质量的信号']),
+            '- 主要问题：',
+            ...(issues.length ? issues.map((item) => `  - ${item}`) : ['  - 没有发现特别突出的质量问题，但仍建议结合上下文代码继续检查']),
+            '- 改进建议：',
+            ...suggestions.map((item) => `  - ${item}`),
+            '- 评价结果：',
+            `  - ${rating === '优秀' ? '代码整体质量较好，重点放在细节优化和测试补强。' : rating === '良好' ? '代码质量整体可用，但仍有少量可维护性或健壮性问题。' : rating === '一般' ? '代码可运行的可能性较高，但还需要明显的结构或质量提升。' : '代码质量偏弱，建议优先处理结构、校验和错误处理。'}`
+        ].join('\n');
+    }
+
+    async callOpenAIStream(onChunk, messages = this.conversationHistory) {
         const model = this.modelSelect.value || 'gpt-4o-mini';
         
         // 构建请求头
@@ -1101,7 +1320,7 @@ ros2 launch <package_name> <launch_file.py>
         // 为不同的API提供商添加特定的请求体配置
         const requestBody = {
             model: model,
-            messages: this.conversationHistory,
+            messages,
             temperature: 0.7,
             max_tokens: 2000,
             stream: true  // 启用流式响应
@@ -1192,7 +1411,7 @@ ros2 launch <package_name> <launch_file.py>
         return fullContent;
     }
     
-    async callOpenAI() {
+    async callOpenAI(messages = this.conversationHistory) {
         const model = this.modelSelect.value || 'gpt-4o-mini';
         
         // 构建请求头
@@ -1204,7 +1423,7 @@ ros2 launch <package_name> <launch_file.py>
         // 为不同的API提供商添加特定的请求体配置
         const requestBody = {
             model: model,
-            messages: this.conversationHistory,
+            messages,
             temperature: 0.7,
             max_tokens: 2000
         };
@@ -1239,6 +1458,7 @@ ros2 launch <package_name> <launch_file.py>
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message ai-message';
         messageDiv.id = 'streaming-message-' + Date.now();
+        messageDiv.dataset.plaintext = '';
         
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
@@ -1264,13 +1484,19 @@ ros2 launch <package_name> <launch_file.py>
                 // 渲染为HTML（支持markdown）
                 textDiv.innerHTML = aiChat.parseMarkdown(this.content);
                 aiChat.chatMessages.scrollTop = aiChat.chatMessages.scrollHeight;
+            },
+            finalize(content, options = {}) {
+                const finalContent = content || this.content;
+                messageDiv.dataset.plaintext = finalContent;
+                aiChat.decorateAIMessage(messageDiv, finalContent, options);
             }
         };
     }
     
-    displayMessage(content, sender, images = []) {
+    displayMessage(content, sender, images = [], options = {}) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
+        messageDiv.dataset.plaintext = typeof content === 'string' ? content : '';
         
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
@@ -1299,9 +1525,35 @@ ros2 launch <package_name> <launch_file.py>
         }
         
         messageDiv.appendChild(messageContent);
+
+        if (sender === 'ai') {
+            this.decorateAIMessage(messageDiv, content, options);
+        }
+
         this.chatMessages.appendChild(messageDiv);
         
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    decorateAIMessage(messageDiv, content, options = {}) {
+        const messageContent = messageDiv.querySelector('.message-content');
+        if (!messageContent || messageContent.querySelector('.message-actions')) {
+            return;
+        }
+
+        const actionBar = document.createElement('div');
+        actionBar.className = 'message-actions';
+        actionBar.innerHTML = `
+            <button class="message-action-btn" data-action="copy" type="button">复制</button>
+            <button class="message-action-btn" data-action="share" type="button">分享</button>
+            <button class="message-action-btn" data-action="retry" type="button">重试</button>
+            <button class="message-action-btn message-action-evaluate" data-action="evaluate" type="button">评价</button>
+        `;
+
+        messageContent.appendChild(actionBar);
+        if (options.variant === 'evaluation') {
+            messageDiv.classList.add('evaluation-message');
+        }
     }
     
     addSystemMessage(content) {
@@ -1310,6 +1562,454 @@ ros2 launch <package_name> <launch_file.py>
         messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
         this.chatMessages.appendChild(messageDiv);
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    handleAIMessageAction(action, messageDiv) {
+        const content = messageDiv?.dataset?.plaintext || '';
+
+        if (action === 'copy') {
+            this.copyToClipboard(content);
+            this.addSystemMessage('✅ 已复制回答内容');
+            return;
+        }
+
+        if (action === 'share') {
+            this.shareText(content);
+            return;
+        }
+
+        if (action === 'retry') {
+            this.retryLastAssistantResponse();
+            return;
+        }
+
+        if (action === 'evaluate') {
+            this.triggerGuidedEvaluation({ force: true, source: 'manual' });
+        }
+    }
+
+    copyToClipboard(text) {
+        if (!text) {
+            this.addSystemMessage('⚠️ 当前消息没有可复制内容');
+            return;
+        }
+
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).catch(() => {
+                this.addSystemMessage('⚠️ 复制失败，请手动选中内容');
+            });
+            return;
+        }
+
+        const tempInput = document.createElement('textarea');
+        tempInput.value = text;
+        tempInput.style.position = 'fixed';
+        tempInput.style.opacity = '0';
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+    }
+
+    shareText(text) {
+        if (!text) {
+            this.addSystemMessage('⚠️ 当前消息没有可分享内容');
+            return;
+        }
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'ROS2 AI 助手回答',
+                text
+            }).catch(() => {
+                this.copyToClipboard(text);
+                this.addSystemMessage('✅ 分享未完成，已改为复制内容');
+            });
+            return;
+        }
+
+        this.copyToClipboard(text);
+        this.addSystemMessage('✅ 当前环境不支持系统分享，已复制内容');
+    }
+
+    retryLastAssistantResponse() {
+        const lastUserIndex = [...this.conversationHistory].map((item, index) => ({ item, index }))
+            .reverse()
+            .find(({ item }) => item.role === 'user');
+
+        if (!lastUserIndex) {
+            this.addSystemMessage('⚠️ 没有找到可重试的用户消息');
+            return;
+        }
+
+        this.conversationHistory = this.conversationHistory.slice(0, lastUserIndex.index);
+        this.saveConversationHistory();
+        this.restoreChatMessages();
+
+        const lastUserMessage = lastUserIndex.item.content;
+        const plainText = typeof lastUserMessage === 'string'
+            ? lastUserMessage
+            : this.extractTextFromStructuredContent(lastUserMessage);
+
+        if (!plainText) {
+            this.addSystemMessage('⚠️ 无法提取可重试的文本内容');
+            return;
+        }
+
+        this.uploadedImages = Array.isArray(lastUserIndex.item.images)
+            ? lastUserIndex.item.images.map((image) => ({ name: 'retry-image', base64: image, type: 'image/png' }))
+            : [];
+        this.chatInput.value = plainText;
+        this.sendMessage();
+    }
+
+    extractTextFromStructuredContent(content) {
+        if (typeof content === 'string') {
+            return content;
+        }
+
+        if (Array.isArray(content)) {
+            return content
+                .map((item) => (item && typeof item === 'object' && item.text) ? item.text : '')
+                .join('\n')
+                .trim();
+        }
+
+        return '';
+    }
+
+    countUserMessages(sinceIndex = 0) {
+        return this.conversationHistory
+            .slice(sinceIndex)
+            .filter((msg) => msg.role === 'user').length;
+    }
+
+    getLastEvaluationIndex() {
+        for (let index = this.conversationHistory.length - 1; index >= 0; index -= 1) {
+            const entry = this.conversationHistory[index];
+            if (entry.role === 'assistant' && entry.meta?.kind === 'evaluation') {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    syncEvaluationStateFromHistory() {
+        const lastEvaluationIndex = this.getLastEvaluationIndex();
+        if (lastEvaluationIndex < 0) {
+            this.lastAutoEvaluationUserCount = 0;
+            localStorage.setItem('ros2_last_auto_evaluation_user_count', '0');
+            return;
+        }
+
+        const userCountBeforeLastEvaluation = this.conversationHistory
+            .slice(0, lastEvaluationIndex)
+            .filter((msg) => msg.role === 'user').length;
+
+        this.lastAutoEvaluationUserCount = userCountBeforeLastEvaluation;
+        localStorage.setItem('ros2_last_auto_evaluation_user_count', String(userCountBeforeLastEvaluation));
+    }
+
+    getRecentConversationTranscript(mode = this.chatMode) {
+        const lastEvaluationIndex = this.getLastEvaluationIndex();
+        let recentEntries = this.conversationHistory
+            .slice(lastEvaluationIndex + 1)
+            .filter((msg) => msg.role !== 'system');
+
+        if (mode === 'quality') {
+            recentEntries = recentEntries.filter((msg) => msg.role === 'user');
+        }
+
+        return recentEntries.map((msg, index) => {
+            const label = msg.role === 'user' ? '学生' : 'AI';
+            const text = this.extractTextFromStructuredContent(msg.content);
+            return `${label}${index + 1}: ${text}`;
+        }).join('\n');
+    }
+
+    inferEvaluationMode(transcript) {
+        if (this.chatMode === 'think' || this.chatMode === 'quality') {
+            return this.chatMode;
+        }
+
+        const codeSignals = [
+            '```', 'function', 'class ', 'def ', 'import ', '#include', 'console.log', 'print(', 'std::', 'return '
+        ];
+        const matchedCodeSignals = codeSignals.filter((signal) => transcript.includes(signal)).length;
+        return matchedCodeSignals >= 2 ? 'quality' : 'think';
+    }
+
+    shouldAutoEvaluateConversation() {
+        if (this.isRunningGuidedEvaluation) {
+            return false;
+        }
+
+        if (!['think', 'quality'].includes(this.chatMode)) {
+            return false;
+        }
+
+        const currentUserCount = this.countUserMessages();
+        return currentUserCount >= this.evaluationTurnInterval &&
+            currentUserCount - this.lastAutoEvaluationUserCount >= this.evaluationTurnInterval;
+    }
+
+    shouldNudgeEvaluation() {
+        if (this.isRunningGuidedEvaluation) {
+            return false;
+        }
+
+        if (['think', 'quality'].includes(this.chatMode)) {
+            return false;
+        }
+
+        const currentUserCount = this.countUserMessages();
+        return currentUserCount >= this.evaluationTurnInterval &&
+            currentUserCount - this.lastEvaluationNudgeUserCount >= this.evaluationTurnInterval;
+    }
+
+    maybeNudgeEvaluation() {
+        if (!this.shouldNudgeEvaluation()) {
+            return;
+        }
+
+        this.lastEvaluationNudgeUserCount = this.countUserMessages();
+        localStorage.setItem('ros2_last_eval_nudge_user_count', String(this.lastEvaluationNudgeUserCount));
+        this.addSystemMessage('🔔 可点击任意 AI 回复下的“评价”，获得 ROS2 知识 / 代码 / 思维 的三维反馈。');
+    }
+
+    async triggerGuidedEvaluation({ force = false, source = 'auto' } = {}) {
+        if (this.isRunningGuidedEvaluation) {
+            return;
+        }
+
+        const transcript = this.getRecentConversationTranscript();
+        if (!transcript) {
+            this.addSystemMessage('⚠️ 暂时没有足够的对话内容可用于评价');
+            return;
+        }
+
+        const evalMode = this.inferEvaluationMode(transcript);
+        if (!force && !this.shouldAutoEvaluateConversation()) {
+            return;
+        }
+
+        this.isRunningGuidedEvaluation = true;
+        try {
+            const title = '阶段性学习评价';
+            const prefix = source === 'auto' ? `📍 ${title}` : `🔎 ${title}`;
+            const header = `${prefix}\n\n`;
+            let fullContent = header;
+            let streamingMsg = null;
+
+            if (this.apiKey) {
+                streamingMsg = this.displayStreamingMessage();
+                streamingMsg.appendChunk(header);
+
+                try {
+                    await this.callGuidedEvaluationAPIStream(evalMode, transcript, (chunk) => {
+                        fullContent += chunk;
+                        streamingMsg.appendChunk(chunk);
+                    });
+                } catch (error) {
+                    console.warn('评价API调用失败，改用本地评价:', error);
+                    this.addSystemMessage('⚠️ 评价API调用失败，已切换为本地评价结果。');
+                    const fallback = this.getCompositeEvaluation(transcript, evalMode);
+                    fullContent += fallback;
+                    streamingMsg.appendChunk(fallback);
+                }
+            } else {
+                const text = this.getCompositeEvaluation(transcript, evalMode);
+                fullContent += text;
+                this.displayMessage(fullContent, 'ai', [], { variant: 'evaluation' });
+            }
+
+            this.conversationHistory.push({
+                role: 'assistant',
+                content: fullContent,
+                meta: { kind: 'evaluation', mode: evalMode, source }
+            });
+            this.saveConversationHistory();
+
+            if (streamingMsg) {
+                streamingMsg.finalize(fullContent, { variant: 'evaluation' });
+            }
+
+            if (source === 'auto') {
+                this.lastAutoEvaluationUserCount = this.countUserMessages();
+            }
+
+            if (source !== 'auto') {
+                this.lastAutoEvaluationUserCount = this.countUserMessages();
+            }
+
+            localStorage.setItem('ros2_last_auto_evaluation_user_count', String(this.lastAutoEvaluationUserCount));
+        } finally {
+            this.isRunningGuidedEvaluation = false;
+        }
+    }
+
+    async callGuidedEvaluationAPIStream(evalMode, transcript, onChunk) {
+        const focusHint = evalMode === 'quality'
+            ? '注意重点放在代码能力，但仍需覆盖ROS知识与思维过程。'
+            : evalMode === 'think'
+                ? '注意重点放在思维过程，但仍需覆盖ROS知识与代码能力。'
+                : '保持三方面均衡评价。';
+
+        const evaluationPrompt = [
+            '你现在要对学生的阶段性学习做评价。必须从三方面给出反馈：',
+            '1) ROS2知识掌握',
+            '2) 代码能力（若无代码片段要说明信息不足）',
+            '3) 思维过程（是否有主动筛选、追问、验证）',
+            '每个维度给出0-100分、证据要点、改进建议。最后给总体结论与下一步建议。',
+            focusHint
+        ].join('\n');
+
+        const messages = [
+            {
+                role: 'system',
+                content: `${this.getComposedSystemPrompt()}\n\n${evaluationPrompt}\n\n只根据下面提供的对话内容做阶段性评价，不要扩展到无关教学。`
+            },
+            {
+                role: 'user',
+                content: transcript
+            }
+        ];
+
+        return this.callOpenAIStream(onChunk, messages);
+    }
+
+    getCompositeEvaluation(inputText, evalMode = 'general') {
+        const text = inputText.trim();
+        if (!text) {
+            return '请先提供对话内容，我会从 ROS2 知识、代码能力与思维过程三个维度做评价。';
+        }
+
+        const ros = this.evaluateRosKnowledge(text);
+        const code = this.evaluateCodeSignals(text);
+        const thinking = this.evaluateThinkingSignals(text);
+
+        if (evalMode === 'quality') {
+            code.score = Math.min(100, code.score + 6);
+        } else if (evalMode === 'think') {
+            thinking.score = Math.min(100, thinking.score + 6);
+        }
+
+        const overall = Math.round((ros.score + code.score + thinking.score) / 3);
+        const overallLabel = overall >= 80 ? '稳定进阶' : overall >= 60 ? '基础扎实但需强化' : '需要重点补强';
+
+        return [
+            '### 三维学习评价（ROS2 / 代码 / 思维）',
+            `- 总体评分：${overall}/100（${overallLabel}）`,
+            `- ROS2知识掌握：${ros.score}/100`,
+            ...ros.evidence.map((item) => `  - 证据：${item}`),
+            ...ros.suggestions.map((item) => `  - 建议：${item}`),
+            `- 代码能力：${code.score}/100`,
+            ...code.evidence.map((item) => `  - 证据：${item}`),
+            ...code.suggestions.map((item) => `  - 建议：${item}`),
+            `- 思维过程：${thinking.score}/100`,
+            ...thinking.evidence.map((item) => `  - 证据：${item}`),
+            ...thinking.suggestions.map((item) => `  - 建议：${item}`),
+            `- 总结：${overallLabel}。建议围绕本章核心概念补充1-2个命令/代码练习，先验证再追问。`
+        ].join('\n');
+    }
+
+    evaluateRosKnowledge(text) {
+        const lower = text.toLowerCase();
+        const rosKeywords = [
+            'ros2', 'ros 2', 'node', '节点', 'topic', '话题', 'service', '服务', 'parameter', '参数',
+            'launch', 'rclpy', 'rclcpp', 'colcon', 'ament', 'rmw', 'dds', 'qos', 'tf2', 'rviz',
+            'urdf', 'gazebo', 'bag', 'workspace', 'package'
+        ];
+        const hits = rosKeywords.filter((keyword) => lower.includes(keyword)).length;
+        const score = Math.max(0, Math.min(100, 45 + hits * 6));
+
+        const evidence = [];
+        if (hits > 0) {
+            evidence.push(`出现 ${hits} 个 ROS2 关键词或概念线索`);
+        } else {
+            evidence.push('对话中缺少明确的 ROS2 概念或命令细节');
+        }
+
+        const suggestions = [];
+        if (hits < 2) {
+            suggestions.push('补充具体概念名或命令（如节点、话题、参数、launch）来定位问题。');
+        }
+        if (hits < 4) {
+            suggestions.push('给出你已尝试的ROS2命令或输出，帮助更精准判断。');
+        }
+
+        return { score, evidence, suggestions };
+    }
+
+    evaluateCodeSignals(text) {
+        const codeSignals = [
+            '```', 'def ', 'class ', 'function', '#include', 'import ', 'ros2 run', 'ros2 launch',
+            'std::', 'rclpy', 'rclcpp'
+        ];
+        const hits = codeSignals.filter((signal) => text.includes(signal)).length;
+        const score = hits === 0 ? 35 : Math.max(0, Math.min(100, 50 + hits * 7));
+
+        const evidence = [];
+        if (hits > 0) {
+            evidence.push(`检测到 ${hits} 处代码/命令信号`);
+        } else {
+            evidence.push('未提供明确代码或命令片段');
+        }
+
+        const suggestions = [];
+        if (hits === 0) {
+            suggestions.push('贴出关键代码或命令片段，便于评价代码质量与问题定位。');
+        } else {
+            suggestions.push('补充运行结果或报错信息，验证代码理解与可执行性。');
+        }
+
+        return { score, evidence, suggestions };
+    }
+
+    evaluateThinkingSignals(text) {
+        const reflectiveSignals = [
+            '我想确认', '我认为', '我觉得', '我理解', '我试过', '我尝试', '为什么', '怎么', '能否',
+            '有没有', '如果', '但是', '不过', '对比', '区别', '原因'
+        ];
+        const passiveSignals = [
+            '直接给我', '帮我写', '照着做', '复制', '粘贴', '完整答案', '不用解释', '原封不动', '一步到位'
+        ];
+        const questionCount = (text.match(/[？?]/g) || []).length;
+
+        let reflectiveHits = 0;
+        let passiveHits = 0;
+        reflectiveSignals.forEach((signal) => {
+            if (text.includes(signal)) reflectiveHits += 1;
+        });
+        passiveSignals.forEach((signal) => {
+            if (text.includes(signal)) passiveHits += 1;
+        });
+
+        let score = 52 + Math.min(18, reflectiveHits * 6) - Math.min(30, passiveHits * 10);
+        if (questionCount >= 3) score += 10;
+        else if (questionCount >= 1) score += 5;
+        score = Math.max(0, Math.min(100, score));
+
+        const evidence = [];
+        if (reflectiveHits > 0) {
+            evidence.push(`出现 ${reflectiveHits} 类主动表达或追问信号`);
+        }
+        if (passiveHits > 0) {
+            evidence.push(`出现 ${passiveHits} 类偏被动表达`);
+        }
+        if (questionCount > 0) {
+            evidence.push(`包含 ${questionCount} 个问号，体现追问动作`);
+        }
+        if (evidence.length === 0) {
+            evidence.push('未看到明显的主动筛选或追问信号');
+        }
+
+        const suggestions = [
+            '先写一句自己的理解，再指出一个最不确定点。',
+            '对比两个方案的差异并说明你倾向哪一个。'
+        ];
+
+        return { score, evidence, suggestions };
     }
     
     showTypingIndicator() {
@@ -1589,6 +2289,10 @@ ros2 launch <package_name> <launch_file.py>
     clearHistory() {
         if (confirm('确定要清除所有对话历史吗？')) {
             this.conversationHistory = [{ role: 'system', content: this.getComposedSystemPrompt() }];
+            this.lastAutoEvaluationUserCount = 0;
+            localStorage.setItem('ros2_last_auto_evaluation_user_count', '0');
+            this.lastEvaluationNudgeUserCount = 0;
+            localStorage.setItem('ros2_last_eval_nudge_user_count', '0');
             this.saveConversationHistory();
             this.chatMessages.innerHTML = '';
             this.addSystemMessage('✅ 对话历史已清除');

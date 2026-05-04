@@ -459,6 +459,38 @@ body {
     max-width: 90%;
 }
 
+.message-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.message-action-btn {
+    border: 1px solid rgba(120, 145, 170, 0.38);
+    background: rgba(255, 255, 255, 0.72);
+    color: #38526d;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.message-action-btn:hover {
+    transform: translateY(-1px);
+    border-color: #2f6c9d;
+}
+
+.message-action-evaluate {
+    background: linear-gradient(135deg, rgba(31, 127, 186, 0.14) 0%, rgba(42, 157, 143, 0.14) 100%);
+}
+
+.evaluation-message .message-content {
+    border: 1px solid rgba(47, 108, 157, 0.3);
+    box-shadow: 0 6px 18px rgba(47, 108, 157, 0.1);
+}
+
 .ai-message .message-content {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -499,6 +531,15 @@ body {
     border-radius: 0;
     outline: none;
     font-size: 0.9rem;
+}
+
+.chat-input-textarea {
+    min-height: 52px;
+    max-height: 140px;
+    resize: none;
+    line-height: 1.45;
+    font-family: inherit;
+    overflow-y: auto;
 }
 
 .chat-input:focus {
@@ -1171,6 +1212,15 @@ body {
 .chat-input {
     background: #ffffff;
     border-color: #c3d9e9;
+}
+
+.chat-input-textarea {
+    min-height: 52px;
+    max-height: 140px;
+    resize: none;
+    line-height: 1.45;
+    font-family: inherit;
+    overflow-y: auto;
 }
 
 .chat-input:focus {
