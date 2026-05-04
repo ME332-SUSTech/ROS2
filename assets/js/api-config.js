@@ -4,7 +4,7 @@
 
 const ENCRYPTED_CONFIG = {
     "qwen": {
-        "api_key": "AQReUEgWAFMCDFBXBB1CXUxWHBFXVkMHTRVSXE0eUVEFAUE=",
+        "api_key": "AQReAE9MBAVaXgsLBE4VXUAGThJXAEJRQR5TA0saUFZRDxM=",
         "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "models": [
             "qwen-max",
@@ -15,7 +15,7 @@ const ENCRYPTED_CONFIG = {
     },
     "deepseek": {
         "api_key": "AQReBBtGVwRQWlgPAx0XXUZUHxIBVxZcTBVdAx9IAlVRBkE=",
-        "endpoint": "https://api.deepseek.com/v1",
+        "endpoint": "https://api.deepseek.com/v1/chat/completions",
         "models": [
             "deepseek-chat",
             "deepseek-coder"
@@ -27,7 +27,8 @@ const ENCRYPTED_CONFIG = {
             "me332-sustech.github.io",
             "me332-sustech.github.io/ROS2",
             "localhost",
-            "127.0.0.1"
+            "127.0.0.1",
+            "“0.0.0.0”"
         ]
     }
 };
